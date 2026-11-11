@@ -125,6 +125,9 @@ input,select{height:48px;border-radius:12px;border:1px solid var(--line);backgro
 .tot b{color:var(--accent);font-size:19px;white-space:nowrap}
 .small{margin:0;color:var(--muted);font-size:14px}
 textarea{border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px 12px;font:inherit;font-size:14px;color:var(--ink);width:100%;resize:vertical}
+.note.bk{display:flex;flex-direction:column;gap:10px}
+.note.bk .chip{color:var(--warn);border-color:var(--warn);background:transparent}
+input[type=file]{height:auto;padding:10px 12px}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -203,6 +206,9 @@ textarea{border-radius:12px;border:1px solid var(--line);background:var(--bg);pa
     <h3>restaurar respaldo</h3>
     <label for="bk-text">Pega aquí el texto de un respaldo. Reemplaza todos los datos de esta copia de la app.
       <textarea id="bk-text" rows="6"></textarea>
+    </label>
+    <label for="bk-file">O elige el archivo de respaldo que guardaste
+      <input id="bk-file" type="file" accept=".json,application/json,text/plain">
     </label>
     <p class="err" id="bk-err" hidden></p>
     <div class="actions">
@@ -319,8 +325,19 @@ function setVal(h,k,v){
 }
 
 /* ---------- views ---------- */
+function backupDue(){
+  if(!LOCAL || !S.habits.length) return false;
+  var pf=S.profile||{}, t=today();
+  if(pf.backupSnooze && pf.backupSnooze>=t) return false;
+  return !pf.lastBackup || pf.lastBackup<=addDays(t,-7);
+}
 function notes(){
   var out="";
+  if(backupDue()){
+    var lb=(S.profile||{}).lastBackup;
+    out+='<div class="note bk"><span>'+(lb ? 'Tu último respaldo fue hace '+Math.round((parse(today())-parse(lb))/864e5)+' días.' : 'Aún no guardas un respaldo de tus datos.')+'</span>'
+      +'<div class="tools"><button class="chip on" data-a="share-backup">guardar respaldo</button><button class="chip" data-a="snooze-backup">mañana</button></div></div>';
+  }
   if(S.note) out+='<p class="note">'+esc(S.note)+'</p>';
   if(S.saveErr) out+='<p class="note">'+esc(S.saveErr)+'</p>';
   return out;
@@ -433,7 +450,8 @@ function viewPerfil(){
   });
   h += '</div></div>';
   h += '<div class="card"><h3>respaldo</h3><p class="small">'+(LOCAL ? 'Tus datos se guardan solo en este dispositivo. Copia un respaldo de vez en cuando.' : 'Tus datos se guardan en tu cuenta de Claude. El respaldo sirve para pasarlos a otra copia de la app.')+'</p>'
-    + '<div class="tools"><button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
+    + '<div class="tools">'+(LOCAL?'<button class="ghost" data-a="share-backup">guardar en archivos</button>':'')+'<button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
+    + (LOCAL ? '<p class="small">'+((S.profile||{}).lastBackup ? 'Último respaldo: '+esc(parse(S.profile.lastBackup).toLocaleDateString("es-MX",{day:"numeric",month:"long"})) : 'Todavía no hay respaldos.')+' Te aviso cada 7 días.</p>' : '')+''
     + (S.bkMsg ? '<p class="small">'+esc(S.bkMsg)+'</p>' : '')+'</div>';
   return h;
 }
@@ -538,6 +556,24 @@ $("form-habit").addEventListener("submit", function(ev){
   saveCfg(); $("dlg-habit").close(); render();
 });
 var restoreArmed = false;
+function markBackup(){ S.profile=Object.assign({},S.profile||{},{lastBackup:today()}); saveCfg(); }
+function shareBackup(){
+  var name="jlg-habitos-"+today()+".json", txt=backupText(), file=null;
+  try{ file=new File([txt],name,{type:"application/json"}); }catch(e){}
+  var done=function(){ markBackup(); S.bkMsg="Respaldo guardado."; render(); };
+  var fallback=function(){ S.bkMsg="Este navegador no deja guardar el archivo; usa copiar respaldo."; render(); };
+  try{
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:"Respaldo de hábitos"}).then(done, function(e){ if(!e || e.name!=="AbortError") fallback(); });
+    }else if(navigator.share){
+      navigator.share({title:"Respaldo de hábitos", text:txt}).then(done, function(e){ if(!e || e.name!=="AbortError") fallback(); });
+    }else fallback();
+  }catch(e){ fallback(); }
+}
+$("bk-file").addEventListener("change", function(){
+  var f=this.files && this.files[0]; if(!f) return;
+  f.text().then(function(t){ $("bk-text").value=t; $("bk-err").hidden=true; }, function(){ $("bk-err").textContent="No se pudo leer ese archivo."; $("bk-err").hidden=false; });
+});
 $("form-name").addEventListener("submit", function(ev){
   ev.preventDefault();
   S.profile = Object.assign({}, S.profile||{}, {name: $("pf-name").value.trim()});
@@ -580,10 +616,12 @@ document.addEventListener("click", function(ev){
   else if(a==="font"){ S.profile = Object.assign({}, S.profile||{}, {font: el.dataset.f}); saveCfg(); render(); }
   else if(a==="edit-name"){ $("pf-name").value = (S.profile&&S.profile.name)||""; $("dlg-name").showModal(); }
   else if(a==="close-name"){ $("dlg-name").close(); }
+  else if(a==="snooze-backup"){ S.profile=Object.assign({},S.profile||{},{backupSnooze:today()}); saveCfg(); render(); }
+  else if(a==="share-backup"){ shareBackup(); }
   else if(a==="copy-backup"){
     var txt = backupText();
     var fail = function(){ $("bk-text").value=txt; $("bk-err").hidden=true; $("dlg-restore").showModal(); $("bk-text").select(); S.bkMsg="No se pudo copiar automáticamente: copia el texto del cuadro."; render(); };
-    try{ navigator.clipboard.writeText(txt).then(function(){ S.bkMsg="Respaldo copiado. Pégalo en tus notas para guardarlo."; render(); }, fail); }catch(e){ fail(); }
+    try{ navigator.clipboard.writeText(txt).then(function(){ markBackup(); S.bkMsg="Respaldo copiado. Pégalo en tus notas para guardarlo."; render(); }, fail); }catch(e){ fail(); }
   }
   else if(a==="open-restore"){ restoreArmed=false; $("bk-text").value=""; $("bk-err").hidden=true; $("bk-go").textContent="Reemplazar mis datos"; $("dlg-restore").showModal(); }
   else if(a==="close-restore"){ $("dlg-restore").close(); }
@@ -603,7 +641,7 @@ document.addEventListener("click", function(ev){
 
 /* ---------- storage ---------- */
 function start(){
-  if(LOCAL){ loadLocal(); route(); return; }
+  if(LOCAL){ loadLocal(); try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){} route(); return; }
   route();
   var slow = setTimeout(function(){
     S.note = S.cfgLoaded ? "No se pudo confirmar con el guardado; lo que ves puede estar desactualizado." : "Aún no se pueden leer tus datos guardados. Se mostrarán en cuanto haya conexión.";
