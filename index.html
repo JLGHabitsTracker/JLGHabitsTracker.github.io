@@ -14,10 +14,10 @@
 <title>JLG HABITS JOURNAL</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:ital,wght@0,500;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-/* Layout: one phone-width column on neutral greys; serif date on top, one card per habit with its own week, tab bar pinned below. Single dark theme by choice. */
+/* Layout: one phone-width column on warm black; serif date on top, one card per habit with icon, week dots and tally marks; tab bar pinned below. Single dark theme by choice; accent swappable from the profile. */
 :root{
   --bg:#11100e; --surface:#1a1815; --raise:#25221c; --ink:#efe6d6; --muted:#978d7a; --line:#322d25;
-  --accent:#d9b97c; --accent-ink:#1b1610; --dim:#7b6843; --done:#d9b97c; --warn:#e8a15a; --warn-soft:#33230f;
+  --accent:#d9b97c; --accent-ink:#1b1610; --dim:#7b6843; --warn:#e8a15a; --warn-soft:#33230f;
   --display:"Fraunces",Georgia,"Times New Roman",serif;
   --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:dark;
@@ -25,24 +25,29 @@
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%}
-button,input,select{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.app{max-width:560px;margin:0 auto;padding:20px 16px 104px;display:flex;flex-direction:column;gap:18px}
-.note{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin:0}
+.app{max-width:560px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 16px 110px;display:flex;flex-direction:column;gap:18px}
+.note{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:12px;font-size:14px;margin:0}
+.note.bk{display:flex;flex-direction:column;gap:10px}
+.note.bk .chip{color:var(--warn);border-color:var(--warn);background:transparent}
+.note.ok{background:var(--raise);color:var(--ink)}
 .eyebrow{margin:0 0 4px;font-size:13px;letter-spacing:.22em;text-transform:lowercase;color:var(--muted)}
 h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.05;text-transform:lowercase}
 h1{font-size:42px;font-weight:700;color:var(--accent);letter-spacing:-.01em}
-h3{font-size:26px;font-weight:500}
+h2{font-size:30px;font-weight:700}
+h3{font-size:24px;font-weight:500}
 em{font-family:var(--display);font-style:italic}
 .num{font-family:var(--display);font-variant-numeric:tabular-nums}
 .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .row.end{align-items:flex-end}
+.small{margin:0;color:var(--muted);font-size:14px}
 
 .head{display:flex;flex-direction:column;gap:10px}
 .daynav{display:flex;align-items:center;gap:6px}
-.nav{width:40px;height:40px;border:0;background:transparent;color:var(--muted);font-size:24px;line-height:1;border-radius:50%;margin-left:-12px}
-.nav + .wkday + .nav{margin-left:0}
+.nav{width:40px;height:40px;border:0;background:transparent;color:var(--muted);font-size:24px;line-height:1;border-radius:50%}
+.nav:first-child{margin-left:-12px}
 .nav:disabled{opacity:.3;cursor:default}
 .wkday{letter-spacing:.3em;text-transform:lowercase;color:var(--muted);font-size:15px}
 .const{color:var(--muted);font-size:16px;white-space:nowrap}
@@ -57,10 +62,13 @@ em{font-family:var(--display);font-style:italic}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:16px}
 .card.met{border-color:var(--dim)}
-.hname{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hrow{display:flex;align-items:center;gap:14px}
+.ico{flex:none;width:52px;height:52px;border-radius:16px;background:var(--raise);color:var(--accent);display:grid;place-items:center}
+.ico svg{width:26px;height:26px}
+.hname{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .hname h3{overflow-wrap:anywhere}
-.sub,.streak{font-family:var(--display);font-style:italic;color:var(--muted);font-size:17px}
-.orb{flex:none;width:60px;height:60px;border-radius:50%;border:1.5px solid var(--dim);background:transparent;color:var(--accent);font-size:26px;line-height:1;display:grid;place-items:center}
+.sub{font-family:var(--display);font-style:italic;color:var(--muted);font-size:17px}
+.orb{flex:none;width:58px;height:58px;border-radius:50%;border:1.5px solid var(--dim);background:transparent;color:var(--accent);font-size:26px;line-height:1;display:grid;place-items:center}
 .orb.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
 .wk{display:grid;grid-template-columns:repeat(7,1fr)}
 .d{border:0;background:transparent;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:8px;border-radius:8px}
@@ -79,12 +87,15 @@ em{font-family:var(--display);font-style:italic}
 .chip.on{border-color:var(--accent);color:var(--ink)}
 .run{color:var(--muted);font-family:var(--display);white-space:nowrap}
 .run b{font-size:32px;font-weight:700;color:var(--accent);margin-right:4px;line-height:1}
+.tally{flex:none;max-width:70%}
+.tally line{stroke:var(--accent);stroke-width:2.6;stroke-linecap:round}
 .empty{color:var(--muted);text-align:center;padding:28px 8px;margin:0}
 .primary{height:48px;border-radius:24px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;padding:0 20px}
 .ghost{height:44px;border-radius:22px;border:1px solid var(--line);background:transparent;font-weight:500;padding:0 16px}
 .danger{height:44px;border-radius:22px;border:1px solid var(--warn);background:transparent;color:var(--warn);font-weight:500;padding:0 16px}
 
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats.two{grid-template-columns:repeat(2,1fr)}
 .stat{background:var(--raise);border-radius:12px;padding:10px}
 .stat .num{font-size:28px;font-weight:700;line-height:1;color:var(--accent)}
 .stat small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
@@ -96,40 +107,61 @@ em{font-family:var(--display);font-style:italic}
 .legend{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap;margin:0}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 
-.mrow{display:flex;align-items:center;gap:8px}
-.mrow .hname{flex:1}
+.mrow{display:flex;align-items:center;gap:10px}
 .mini{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--raise);color:var(--muted)}
 .mini:disabled{opacity:.35;cursor:default}
+
+.who{display:flex;align-items:center;gap:16px}
+.avatar{flex:none;width:84px;height:84px;border-radius:50%;border:1.5px solid var(--dim);background:var(--raise);color:var(--accent);display:grid;place-items:center;overflow:hidden;padding:0;font-family:var(--display);font-size:34px;font-weight:700;text-transform:uppercase}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.who .hname h2{color:var(--accent)}
+.meta{display:flex;flex-direction:column;gap:2px;font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.badge{display:flex;align-items:center;gap:10px;background:var(--raise);border-radius:14px;padding:10px;opacity:.4}
+.badge.got{opacity:1}
+.badge .ico{width:40px;height:40px;border-radius:12px;background:var(--bg)}
+.badge .ico svg{width:20px;height:20px}
+.badge b{display:block;font-size:14px;font-weight:600}
+.badge small{display:block;color:var(--muted);font-size:12px}
+.tot{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.tot li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.tot li:first-child{border-top:0;padding-top:0}
+.tot span{font-family:var(--display);font-size:19px;text-transform:lowercase;overflow-wrap:anywhere}
+.tot b{color:var(--accent);font-size:19px;white-space:nowrap}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.sw{width:44px;height:44px;border-radius:50%;border:2px solid transparent;padding:4px;background:transparent}
+.sw span{display:block;width:100%;height:100%;border-radius:50%}
+.sw.on{border-color:var(--ink)}
+.setrow{display:flex;flex-direction:column;gap:8px}
+.setrow > span{font-size:13px;color:var(--muted)}
 
 .tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 .tabs a{padding:16px 0 18px;text-align:center;text-decoration:none;color:var(--muted);font-family:var(--display);font-style:italic;font-size:17px;text-transform:lowercase;border-top:2px solid transparent;margin-top:-1px}
 .tabs a.on{color:var(--accent);border-top-color:var(--accent)}
 
-dialog{border:1px solid var(--line);border-radius:22px;background:var(--surface);color:var(--ink);padding:20px;width:min(92vw,420px)}
+dialog{border:1px solid var(--line);border-radius:22px;background:var(--surface);color:var(--ink);padding:20px;width:min(92vw,440px);max-height:88vh;overflow:auto}
 dialog::backdrop{background:rgba(6,5,4,.7)}
 dialog form{display:flex;flex-direction:column;gap:14px}
 label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 input,select{height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:16px;color:var(--ink);width:100%}
+input[type=file]{height:auto;padding:10px 12px}
+textarea{border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px 12px;font-size:14px;color:var(--ink);width:100%;resize:vertical}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .actions .danger{margin-right:auto}
 .err{color:var(--warn);font-size:13px;margin:0}
-.tally{flex:none;max-width:70%}
-.tally line{stroke:var(--accent);stroke-width:2.6;stroke-linecap:round}
-.stats.two{grid-template-columns:repeat(2,1fr)}
-.tot{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-.tot li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
-.tot li:first-child{border-top:0;padding-top:0}
-.tot span{font-family:var(--display);font-size:19px;text-transform:lowercase;overflow-wrap:anywhere}
-.tot b{color:var(--accent);font-size:19px;white-space:nowrap}
-.small{margin:0;color:var(--muted);font-size:14px}
-textarea{border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px 12px;font:inherit;font-size:14px;color:var(--ink);width:100%;resize:vertical}
-.note.bk{display:flex;flex-direction:column;gap:10px}
-.note.bk .chip{color:var(--warn);border-color:var(--warn);background:transparent}
-input[type=file]{height:auto;padding:10px 12px}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
+.icopick{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.icopick label{display:block;cursor:pointer}
+.icopick input{position:absolute;opacity:0;width:1px;height:1px}
+.icopick span{display:grid;place-items:center;aspect-ratio:1;border-radius:12px;background:var(--raise);color:var(--muted);border:1.5px solid transparent}
+.icopick svg{width:22px;height:22px}
+.icopick input:checked + span{border-color:var(--accent);color:var(--accent)}
+.icopick input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
-@media (max-width:380px){h1{font-size:36px}.state{font-size:17px}}
+@media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
 </style>
 </head>
@@ -138,19 +170,19 @@ input[type=file]{height:auto;padding:10px 12px}
 
 <nav class="tabs" aria-label="Secciones"><div>
   <a href="#hoy" id="tab-hoy">día</a>
-  <a href="#historial" id="tab-historial">Historial</a>
-  <a href="#habitos" id="tab-habitos">Hábitos</a>
-  <a href="#perfil" id="tab-perfil">Perfil</a>
+  <a href="#historial" id="tab-historial">historial</a>
+  <a href="#habitos" id="tab-habitos">hábitos</a>
+  <a href="#perfil" id="tab-perfil">perfil</a>
 </div></nav>
 
 <dialog id="dlg-val">
   <form id="form-val">
-    <h3 id="val-title">Valor</h3>
+    <h3 id="val-title">valor</h3>
     <label for="val-input"><span id="val-label">Cantidad</span>
       <input id="val-input" type="number" inputmode="decimal" min="0" step="any" required>
     </label>
     <div class="actions">
-      <button type="button" class="ghost" data-a="close-val">Cancelar</button>
+      <button type="button" class="ghost" data-a="close" data-d="dlg-val">Cancelar</button>
       <button type="submit" class="primary">Guardar</button>
     </div>
   </form>
@@ -158,21 +190,26 @@ input[type=file]{height:auto;padding:10px 12px}
 
 <dialog id="dlg-habit">
   <form id="form-habit">
-    <h3 id="hf-title">Nuevo hábito</h3>
+    <h3 id="hf-title">nuevo hábito</h3>
     <label for="hf-name">Nombre
-      <input id="hf-name" type="text" maxlength="40" required placeholder="Leer, meditar, estirar…">
+      <input id="hf-name" type="text" maxlength="40" required placeholder="Leer, meditar, gym…">
     </label>
+    <fieldset>
+      <legend>Ícono</legend>
+      <div class="icopick" id="hf-icons"></div>
+    </fieldset>
     <label for="hf-type">Cómo se registra
       <select id="hf-type">
         <option value="count">Cantidad con meta diaria</option>
-        <option value="check">Sí o no</option>
+        <option value="check">Sí o no, cada día</option>
+        <option value="week">Veces por semana</option>
       </select>
     </label>
     <div class="two" id="hf-countfields">
-      <label for="hf-goal">Meta diaria
+      <label for="hf-goal"><span id="hf-goallabel">Meta diaria</span>
         <input id="hf-goal" type="number" inputmode="decimal" min="0" step="any">
       </label>
-      <label for="hf-unit">Unidad
+      <label for="hf-unit" id="hf-unitlabel">Unidad
         <input id="hf-unit" type="text" maxlength="12" placeholder="min, L, pasos">
       </label>
     </div>
@@ -182,20 +219,29 @@ input[type=file]{height:auto;padding:10px 12px}
     <p class="err" id="hf-err" hidden></p>
     <div class="actions">
       <button type="button" class="danger" id="hf-del" data-a="del-habit" hidden>Eliminar</button>
-      <button type="button" class="ghost" data-a="close-habit">Cancelar</button>
+      <button type="button" class="ghost" data-a="close" data-d="dlg-habit">Cancelar</button>
       <button type="submit" class="primary">Guardar</button>
     </div>
   </form>
 </dialog>
 
-<dialog id="dlg-name">
-  <form id="form-name">
-    <h3>tu nombre</h3>
-    <label for="pf-name">Cómo quieres que aparezca en tu perfil
-      <input id="pf-name" type="text" maxlength="30">
+<dialog id="dlg-profile">
+  <form id="form-profile">
+    <h3>editar perfil</h3>
+    <label for="pf-name">Nombre
+      <input id="pf-name" type="text" maxlength="30" autocomplete="name">
     </label>
+    <label for="pf-email">Correo
+      <input id="pf-email" type="email" maxlength="80" autocomplete="email" placeholder="tu@correo.com">
+    </label>
+    <p class="small" id="pf-emailnote"></p>
+    <label for="pf-photo">Foto de perfil
+      <input id="pf-photo" type="file" accept="image/*">
+    </label>
+    <p class="err" id="pf-err" hidden></p>
     <div class="actions">
-      <button type="button" class="ghost" data-a="close-name">Cancelar</button>
+      <button type="button" class="danger" data-a="del-photo" id="pf-delphoto">Quitar foto</button>
+      <button type="button" class="ghost" data-a="close" data-d="dlg-profile">Cancelar</button>
       <button type="submit" class="primary">Guardar</button>
     </div>
   </form>
@@ -204,15 +250,15 @@ input[type=file]{height:auto;padding:10px 12px}
 <dialog id="dlg-restore">
   <form id="form-restore">
     <h3>restaurar respaldo</h3>
-    <label for="bk-text">Pega aquí el texto de un respaldo. Reemplaza todos los datos de esta copia de la app.
-      <textarea id="bk-text" rows="6"></textarea>
-    </label>
-    <label for="bk-file">O elige el archivo de respaldo que guardaste
+    <label for="bk-file">Elige el archivo de respaldo que guardaste
       <input id="bk-file" type="file" accept=".json,application/json,text/plain">
+    </label>
+    <label for="bk-text">O pega aquí el texto del respaldo. Reemplaza todos los datos de esta copia de la app.
+      <textarea id="bk-text" rows="5"></textarea>
     </label>
     <p class="err" id="bk-err" hidden></p>
     <div class="actions">
-      <button type="button" class="ghost" data-a="close-restore">Cerrar</button>
+      <button type="button" class="ghost" data-a="close" data-d="dlg-restore">Cerrar</button>
       <button type="submit" class="danger" id="bk-go">Reemplazar mis datos</button>
     </div>
   </form>
@@ -221,12 +267,45 @@ input[type=file]{height:auto;padding:10px 12px}
 <script>
 (function(){
 "use strict";
+var VERSION = "1.4";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
 var fmt = function(n){ return Number(n).toLocaleString("es-MX",{maximumFractionDigits:2}); };
 var r2 = function(n){ return Math.round(n*100)/100; };
 var clone = function(o){ return JSON.parse(JSON.stringify(o)); };
+var plain = function(s){ return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim(); };
+
+/* ---------- icons ---------- */
+var ICONS = {
+  libro:'<path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/>',
+  gota:'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+  tenis:'<path d="M3 16.5V11l2-1 2 1.5 2.5-4 3 1L14 11l5 1.8c1.3.5 2 1.4 2 2.7v1z"/><path d="M3 16.5h18v1.5H3z"/><path d="M10 9.5l1.5 1M11.5 8l1.3 1"/>',
+  pluma:'<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><path d="M16 8L2 22"/><path d="M17.5 15H9"/>',
+  pesa:'<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
+  cama:'<path d="M2 19v-9M2 15h20M22 19v-4a4 4 0 0 0-4-4h-8v4"/><circle cx="6" cy="12.5" r="1.8"/>',
+  luna:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+  sol:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  hoja:'<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10z"/><path d="M2 21c0-3 1.9-5.4 5.1-6"/>',
+  corazon:'<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>',
+  manzana:'<path d="M12 7.5c-2.5-1.8-8-1.5-8 4.5 0 5 3 9 5 9 1.2 0 1.8-.6 3-.6s1.8.6 3 .6c2 0 5-4 5-9 0-6-5.5-6.3-8-4.5z"/><path d="M12 7.5c0-2.2 1-3.8 3-4.5"/>',
+  musica:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  estudio:'<path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v5"/>',
+  codigo:'<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>',
+  dinero:'<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="2.5"/><path d="M6 9.5v.01M18 15.5v.01"/>',
+  pantalla:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M3 3l18 18"/>',
+  reloj:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>'
+};
+var ICON_NAMES = Object.keys(ICONS);
+function svg(name){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[name]||ICONS.check)+'</svg>'; }
+function guessIcon(name){
+  var n=plain(name);
+  var rules=[[/lee|lectura|libro|pagina/,"libro"],[/agua|hidrat|litro/,"gota"],[/paso|camin|correr|run|trot/,"tenis"],[/escrib|diario|journal|nota/,"pluma"],[/gym|gimnas|pesa|entren|fuerza/,"pesa"],[/dorm|sueno|sleep|cama/,"cama"],[/medit|respir|yoga|estir/,"hoja"],[/fruta|verdura|comida|dieta|proteina/,"manzana"],[/music|guitarr|piano|cantar/,"musica"],[/estudi|clase|tarea|ingles|idioma/,"estudio"],[/codig|program/,"codigo"],[/ahorr|dinero|gasto/,"dinero"],[/pantalla|celular|redes|telefono/,"pantalla"],[/madrug|levant|sol/,"sol"]];
+  for(var i=0;i<rules.length;i++) if(rules[i][0].test(n)) return rules[i][1];
+  return "check";
+}
+function iconOf(h){ return ICONS[h.icon] ? h.icon : guessIcon(h.name); }
 
 /* ---------- dates ---------- */
 function keyOf(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -234,12 +313,81 @@ function parse(k){ var p=k.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
 function addDays(k,n){ var d=parse(k); d.setDate(d.getDate()+n); return keyOf(d); }
 function today(){ return keyOf(new Date()); }
 function monday(k){ var d=parse(k); var w=(d.getDay()+6)%7; return addDays(k,-w); }
+function longDate(k,opts){ return parse(k).toLocaleDateString("es-MX",opts||{day:"numeric",month:"long",year:"numeric"}); }
 
 /* ---------- state ---------- */
-var S = { habits:[], profile:{}, days:{}, sel:today(), view:"hoy", cfgLoaded:false, note:"", saveErr:"", bkMsg:"" };
+var S = { habits:[], profile:{}, days:{}, sel:today(), view:"hoy", cfgLoaded:false, note:"", ok:"", saveErr:"", bkMsg:"" };
 var framed = (function(){ try{ return window.self!==window.top; }catch(e){ return true; } })();
 var LOCAL = !(window.claude && window.claude.use) && !framed;
 var LKEY = "bitacora-habitos-v1";
+var db = null, cfgRef = null, daysCol = null;
+var editing = null, valFor = null, delArmed = false, restoreArmed = false, paramsDone = false;
+
+function isWeek(h){ return h.type==="week"; }
+function val(h,k){ var d=S.days[k]; return d ? (Number(d[h.id])||0) : 0; }
+function ratio(h,k){ var v=val(h,k); if(h.type!=="count") return v>=1?1:0; return h.goal>0 ? Math.min(1,v/h.goal) : (v>0?1:0); }
+function met(h,k){ return ratio(h,k)>=1; }
+function weekCount(h,k){ var m=monday(k), n=0; for(var i=0;i<7;i++) if(val(h,addDays(m,i))>=1) n++; return n; }
+function weekMet(h,mon){ return weekCount(h,mon) >= (h.goal||1); }
+function metCount(k){ var n=0; S.habits.forEach(function(h){ if(met(h,k)) n++; }); return n; }
+function streak(h){
+  var n=0, g=0;
+  if(isWeek(h)){
+    var m=monday(today());
+    if(!weekMet(h,m)) m=addDays(m,-7);
+    while(weekMet(h,m) && g++<1000){ n++; m=addDays(m,-7); }
+    return n;
+  }
+  var k=today();
+  if(!met(h,k)) k=addDays(k,-1);
+  while(met(h,k) && g++<4000){ n++; k=addDays(k,-1); }
+  return n;
+}
+function firstKey(){ var ks=Object.keys(S.days).sort(); return ks[0]||today(); }
+function bestStreak(h){
+  var best=0, run=0, g=0, end=today();
+  if(isWeek(h)){
+    var m=monday(firstKey());
+    while(m<=end && g++<1000){ if(weekMet(h,m)){ run++; if(run>best) best=run; } else if(m<monday(end)) run=0; m=addDays(m,7); }
+    return best;
+  }
+  var k=firstKey();
+  while(k<=end && g++<4000){ if(met(h,k)){ run++; if(run>best) best=run; } else run=0; k=addDays(k,1); }
+  return best;
+}
+function consistency(h){
+  if(isWeek(h)){
+    var m=monday(today()), ok=0;
+    for(var i=0;i<4;i++){ if(weekMet(h,addDays(m,-7*i))) ok++; }
+    return {v:ok+"/4", l:"semanas cumplidas de 4"};
+  }
+  var end=today(), start=addDays(end,-29);
+  if(h.since && h.since>start) start=h.since;
+  var k=start, total=0, good=0;
+  while(k<=end && total<31){ total++; if(met(h,k)) good++; k=addDays(k,1); }
+  return {v:(total?Math.round(good/total*100):0)+"%", l:"últimos 30 días"};
+}
+function dayScore(k){
+  var n=0, m=0, sum=0;
+  S.habits.forEach(function(h){
+    if(isWeek(h) && !met(h,k)) return;
+    n++; var r=ratio(h,k); sum+=r; if(r>=1) m++;
+  });
+  return {n:n, m:m, pct:n?Math.round(sum/n*100):0};
+}
+function dayStreak(){
+  var k=today(), n=0;
+  if(!metCount(k)) k=addDays(k,-1);
+  while(metCount(k)>0 && n<4000){ n++; k=addDays(k,-1); }
+  return n;
+}
+function bestDayStreak(){
+  var k=firstKey(), end=today(), best=0, run=0, g=0;
+  while(k<=end && g++<4000){ if(metCount(k)>0){ run++; if(run>best) best=run; } else run=0; k=addDays(k,1); }
+  return best;
+}
+
+/* ---------- saving ---------- */
 function loadLocal(){
   try{
     var o = JSON.parse(localStorage.getItem(LKEY)||"null");
@@ -249,36 +397,8 @@ function loadLocal(){
 }
 function persistLocal(){
   try{ localStorage.setItem(LKEY, JSON.stringify({habits:S.habits, profile:S.profile, days:S.days})); if(S.saveErr){ S.saveErr=""; } }
-  catch(e){ S.saveErr="No se pudo guardar en este dispositivo."; }
+  catch(e){ S.saveErr="No se pudo guardar en este dispositivo. Si subiste una foto muy pesada, quítala."; }
 }
-var db = null, cfgRef = null, daysCol = null;
-var editing = null, valFor = null, delArmed = false;
-
-function val(h,k){ var d=S.days[k]; return d ? (Number(d[h.id])||0) : 0; }
-function ratio(h,k){ var v=val(h,k); if(h.type==="check") return v>=1?1:0; return h.goal>0 ? Math.min(1,v/h.goal) : (v>0?1:0); }
-function met(h,k){ return ratio(h,k)>=1; }
-function metCount(k){ var n=0; S.habits.forEach(function(h){ if(met(h,k)) n++; }); return n; }
-function streak(h){
-  var k=today(), n=0;
-  if(!met(h,k)) k=addDays(k,-1);
-  while(met(h,k)){ n++; k=addDays(k,-1); }
-  return n;
-}
-function bestStreak(h){
-  var keys=Object.keys(S.days).sort(); if(!keys.length) return 0;
-  var k=keys[0], end=today(), best=0, run=0, guard=0;
-  while(k<=end && guard++<4000){ if(met(h,k)){ run++; if(run>best) best=run; } else run=0; k=addDays(k,1); }
-  return best;
-}
-function pct30(h){
-  var end=today(), start=addDays(end,-29);
-  if(h.since && h.since>start) start=h.since;
-  var k=start, total=0, ok=0;
-  while(k<=end && total<31){ total++; if(met(h,k)) ok++; k=addDays(k,1); }
-  return total ? Math.round(ok/total*100) : 0;
-}
-
-/* ---------- saving: one write at a time per document, bursts coalesced ---------- */
 var pend = {};
 function pending(key){ var p=pend[key]; return !!p && (p.dirty||p.busy); }
 function save(key, ref, getData){
@@ -304,7 +424,7 @@ async function flush(p, ref, getData){
       if(S.saveErr){ S.saveErr=""; render(); }
     }catch(e){
       var code = e && e.code;
-      S.saveErr = code==="quota_exceeded" ? "No se guardó el último cambio: el almacenamiento de la app está lleno."
+      S.saveErr = code==="quota_exceeded" ? "No se guardó el último cambio: el almacenamiento está lleno."
         : code==="invalid_argument" ? "No se guardó el último cambio: esta vista no tiene permiso de escritura."
         : "No se guardó el último cambio. Revisa tu conexión y vuelve a intentarlo.";
       render();
@@ -314,17 +434,54 @@ async function flush(p, ref, getData){
 }
 function saveCfg(){ save("cfg", cfgRef, function(){ return {habits: clone(S.habits), profile: clone(S.profile||{})}; }); }
 function saveDay(k){ save("d:"+k, daysCol ? daysCol.doc(k) : null, function(){ return {v: clone(S.days[k]||{})}; }); }
+function setProfile(patch){ S.profile = Object.assign({}, S.profile||{}, patch); saveCfg(); }
 
 function setVal(h,k,v){
   v = Math.max(0, r2(Number(v)||0));
   var d = Object.assign({}, S.days[k]||{});
   d[h.id] = v;
   S.days[k] = d;
+  if(!S.profile.since){ S.profile = Object.assign({}, S.profile, {since: firstKey()<k ? firstKey() : k}); saveCfg(); }
   saveDay(k);
   render();
 }
 
+/* ---------- look ---------- */
+var FONTS = {
+  serif:{label:"serif", css:'"Fraunces",Georgia,"Times New Roman",serif'},
+  sans:{label:"moderna", css:'"Instrument Sans",system-ui,-apple-system,sans-serif'},
+  cond:{label:"condensada", css:'"Barlow Condensed","Arial Narrow",Arial,sans-serif'},
+  mono:{label:"máquina", css:'"IBM Plex Mono",ui-monospace,Menlo,monospace'}
+};
+var ACCENTS = {
+  dorado:{label:"dorado", a:"#d9b97c", d:"#7b6843"},
+  plata:{label:"plata", a:"#cfd3d8", d:"#6b6f75"},
+  salvia:{label:"salvia", a:"#a9c3a0", d:"#5c6e57"},
+  cobalto:{label:"cobalto", a:"#9db2ff", d:"#4f5d93"},
+  coral:{label:"coral", a:"#ec9f8f", d:"#86584e"}
+};
+function fontKey(){ var f=S.profile && S.profile.font; return FONTS[f] ? f : "serif"; }
+function accentKey(){ var a=S.profile && S.profile.accent; return ACCENTS[a] ? a : "dorado"; }
+function applyLook(){
+  var r=document.documentElement.style, ac=ACCENTS[accentKey()];
+  r.setProperty("--display", FONTS[fontKey()].css);
+  r.setProperty("--accent", ac.a);
+  r.setProperty("--dim", ac.d);
+}
+
 /* ---------- views ---------- */
+var WD = ["l","m","m","j","v","s","d"];
+function tally(n){
+  var show=Math.min(n,20);
+  if(!show) return '<span class="run">sin racha</span>';
+  var w=Math.ceil(show/5)*44, s='<svg class="tally" viewBox="0 0 '+w+' 30" width="'+w+'" height="30" aria-hidden="true">';
+  for(var i=0;i<show;i++){
+    var x0=Math.floor(i/5)*44, j=i%5;
+    if(j<4){ var x=x0+6+j*8, t=((i*7)%3)-1; s+='<line x1="'+(x+t)+'" y1="3" x2="'+(x-t)+'" y2="27"/>'; }
+    else s+='<line x1="'+(x0+1)+'" y1="23" x2="'+(x0+36)+'" y2="7"/>';
+  }
+  return s+'</svg>';
+}
 function backupDue(){
   if(!LOCAL || !S.habits.length) return false;
   var pf=S.profile||{}, t=today();
@@ -333,6 +490,7 @@ function backupDue(){
 }
 function notes(){
   var out="";
+  if(S.ok) out+='<p class="note ok" role="status">'+esc(S.ok)+'</p>';
   if(backupDue()){
     var lb=(S.profile||{}).lastBackup;
     out+='<div class="note bk"><span>'+(lb ? 'Tu último respaldo fue hace '+Math.round((parse(today())-parse(lb))/864e5)+' días.' : 'Aún no guardas un respaldo de tus datos.')+'</span>'
@@ -342,21 +500,12 @@ function notes(){
   if(S.saveErr) out+='<p class="note">'+esc(S.saveErr)+'</p>';
   return out;
 }
-function dayStreak(){
-  var any=function(k){ return metCount(k)>0; };
-  var k=today(), n=0;
-  if(!any(k)) k=addDays(k,-1);
-  while(any(k) && n<4000){ n++; k=addDays(k,-1); }
-  return n;
-}
-var WD = ["l","m","m","j","v","s","d"];
+function isSteps(h){ return h.type==="count" && (/paso/.test(plain(h.unit)) || /paso/.test(plain(h.name))); }
 function viewHoy(){
-  var k=S.sel, t=today(), d=parse(k), n=S.habits.length, m=metCount(k);
+  var k=S.sel, t=today(), d=parse(k), sc=dayScore(k);
   var wk = k===t ? "hoy · "+d.toLocaleDateString("es-MX",{weekday:"long"}) : d.toLocaleDateString("es-MX",{weekday:"long"});
-  var ds=dayStreak(), sum=0;
-  S.habits.forEach(function(x){ sum+=ratio(x,k); });
-  var pct = n ? Math.round(sum/n*100) : 0;
-  var state = !n ? "" : m===n ? "día completo" : m+" de "+n;
+  var ds=dayStreak();
+  var state = !sc.n ? "" : sc.m===sc.n ? "día completo" : sc.m+" de "+sc.n;
   var h = notes();
   h += '<header class="head"><div class="row"><div class="daynav"><button class="nav" data-a="prev" aria-label="Día anterior">‹</button>'
     + '<span class="wkday">'+esc(wk)+'</span>'
@@ -364,19 +513,21 @@ function viewHoy(){
     + '<em class="const">'+(ds>0 ? 'constancia · '+ds+(ds===1?' día':' días') : 'empieza hoy')+'</em></div>'
     + '<div class="row end"><h1>'+esc(d.toLocaleDateString("es-MX",{day:"numeric",month:"long"}))+'</h1><em class="state">'+state+'</em></div>'
     + '<div class="rule"></div>'
-    + '<div class="prog"><div class="bar"><u style="width:'+pct+'%"></u></div><span class="num">'+pct+'%</span></div></header>';
+    + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div></header>';
   if(!S.cfgLoaded){ return h+'<p class="empty">Cargando tus hábitos…</p>'; }
-  if(!n){
+  if(!S.habits.length){
     return h+'<div class="card"><p class="empty">Todavía no hay hábitos en tu bitácora.</p><button class="primary" data-a="new-habit">Crear el primer hábito</button></div>';
   }
   var mon=monday(k);
   h += '<ul class="list">';
   S.habits.forEach(function(x){
-    var v=val(x,k), ok=met(x,k), st=streak(x), count=x.type!=="check";
-    var u = x.unit ? ' '+esc(x.unit) : '';
-    var sub = count ? fmt(v)+' / '+fmt(x.goal)+u : (ok?'hecho':'pendiente');
-    h += '<li class="card'+(ok?' met':'')+'"><div class="row"><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div>';
-    if(count){
+    var v=val(x,k), ok=met(x,k), st=streak(x), u = x.unit ? ' '+esc(x.unit) : '';
+    var sub, cardMet=ok;
+    if(x.type==="count") sub = fmt(v)+' / '+fmt(x.goal)+u;
+    else if(isWeek(x)){ var wc=weekCount(x,k); cardMet=wc>=x.goal; sub = wc+' de '+x.goal+' esta semana'+(cardMet?' · cumplida':''); }
+    else sub = ok?'hecho':'pendiente';
+    h += '<li class="card'+(cardMet?' met':'')+'"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div>';
+    if(x.type==="count"){
       h += '<button class="orb'+(ok?' on':'')+'" data-a="inc" data-id="'+x.id+'" aria-label="Sumar '+fmt(x.step)+u+' a '+esc(x.name)+'">'+(ok?'✓':'+')+'</button></div>';
     }else{
       h += '<button class="orb'+(ok?' on':'')+'" data-a="toggle" data-id="'+x.id+'" aria-pressed="'+ok+'" aria-label="Marcar '+esc(x.name)+'">'+(ok?'✓':'')+'</button></div>';
@@ -385,95 +536,30 @@ function viewHoy(){
     for(var i=0;i<7;i++){
       var dk=addDays(mon,i), r=ratio(x,dk);
       h += '<button class="d'+(r>=1?' met':r>0?' part':'')+(dk===k?' sel':'')+'" data-a="pick" data-k="'+dk+'"'+(dk>t?' disabled':'')
-        + ' aria-label="'+esc(parse(dk).toLocaleDateString("es-MX",{weekday:"long",day:"numeric"}))+'"><i></i><small>'+WD[i]+'</small></button>';
+        + ' aria-label="'+esc(longDate(dk,{weekday:"long",day:"numeric"}))+'"><i></i><small>'+WD[i]+'</small></button>';
     }
     h += '</div>';
-    if(count){
+    if(x.type==="count"){
       h += '<div class="tools"><button class="chip" data-a="dec" data-id="'+x.id+'"'+(v<=0?' disabled':'')+'>− '+fmt(x.step)+'</button>'
-        + '<button class="chip" data-a="edit-val" data-id="'+x.id+'">escribir total</button></div>';
+        + '<button class="chip" data-a="edit-val" data-id="'+x.id+'">escribir total</button>'
+        + (isSteps(x) ? '<button class="chip" data-a="paste" data-id="'+x.id+'">pegar de Salud</button>' : '')+'</div>';
     }
-    h += '<div class="row foot">'+tally(st)+'<div class="run">'+(st>0 ? '<b class="num">'+st+'</b>'+(st===1?'día':'días') : '')+'</div></div></li>';
+    var unitTxt = isWeek(x) ? (st===1?'semana':'semanas') : (st===1?'día':'días');
+    h += '<div class="row foot">'+tally(st)+'<div class="run">'+(st>0 ? '<b class="num">'+st+'</b>'+unitTxt : '')+'</div></div></li>';
   });
   return h+'</ul>';
 }
-function tally(n){
-  var show=Math.min(n,20);
-  if(!show) return '<span class="run">sin racha</span>';
-  var g=Math.ceil(show/5), w=g*44, s='<svg class="tally" viewBox="0 0 '+w+' 30" width="'+w+'" height="30" role="img" aria-label="Racha de '+n+' días">';
-  for(var i=0;i<show;i++){
-    var x0=Math.floor(i/5)*44, j=i%5;
-    if(j<4){ var x=x0+6+j*8, tilt=((i*7)%3)-1; s+='<line x1="'+(x+tilt)+'" y1="3" x2="'+(x-tilt)+'" y2="27"/>'; }
-    else s+='<line x1="'+(x0+1)+'" y1="23" x2="'+(x0+36)+'" y2="7"/>';
-  }
-  return s+'</svg>';
-}
-function bestDayStreak(){
-  var keys=Object.keys(S.days).sort(); if(!keys.length) return 0;
-  var k=keys[0], end=today(), best=0, run=0, guard=0;
-  while(k<=end && guard++<4000){ if(metCount(k)>0){ run++; if(run>best) best=run; } else run=0; k=addDays(k,1); }
-  return best;
-}
-function backupText(){ return JSON.stringify({app:"bitacora-habitos", v:1, habits:S.habits, profile:S.profile, days:S.days}); }
-function viewPerfil(){
-  var keys=Object.keys(S.days).sort(), t=today(), n=S.habits.length, logged=0, full=0, kept=0, first="";
-  keys.forEach(function(k){
-    if(k>t) return;
-    var d=S.days[k], has=false;
-    for(var id in d){ if(Number(d[id])>0){ has=true; break; } }
-    if(!has) return;
-    if(!first) first=k;
-    logged++;
-    var m=metCount(k); kept+=m; if(n && m===n) full++;
-  });
-  var name = S.profile && S.profile.name ? S.profile.name : "";
-  var h = notes()+'<div class="row end"><div><p class="eyebrow">tu bitácora</p><h1>'+esc(name||"perfil")+'</h1></div>'
-    + '<button class="ghost" data-a="edit-name">'+(name?'cambiar nombre':'poner mi nombre')+'</button></div>';
-  h += '<em class="sub">'+(first ? logged+(logged===1?' día':' días')+' con registro desde el '+esc(parse(first).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})) : 'aún no hay días registrados')+'</em>';
-  h += '<div class="stats two">'
-    + '<div class="stat"><span class="num">'+dayStreak()+'</span><small>días de constancia actual</small></div>'
-    + '<div class="stat"><span class="num">'+bestDayStreak()+'</span><small>mejor constancia</small></div>'
-    + '<div class="stat"><span class="num">'+full+'</span><small>días completos</small></div>'
-    + '<div class="stat"><span class="num">'+kept+'</span><small>metas cumplidas</small></div></div>';
-  if(n){
-    h += '<div class="card"><h3>acumulado</h3><ul class="tot">';
-    S.habits.forEach(function(x){
-      var sum=0, times=0;
-      keys.forEach(function(k){ var v=val(x,k); sum+=v; if(met(x,k)) times++; });
-      var right = x.type==="check" ? times+(times===1?' vez':' veces') : fmt(r2(sum))+(x.unit?' '+esc(x.unit):'');
-      h += '<li><span>'+esc(x.name)+'</span><b class="num">'+right+'</b></li>';
-    });
-    h += '</ul></div>';
-  }
-  h += '<div class="card"><h3>tipografía</h3><p class="small">Prueba cada una; el cambio se ve al instante y se guarda.</p><div class="tools">';
-  Object.keys(FONTS).forEach(function(f){
-    h += '<button class="chip'+(fontKey()===f?' on':'')+'" data-a="font" data-f="'+f+'" aria-pressed="'+(fontKey()===f)+'" style="font-family:'+esc(FONTS[f].css)+'">'+FONTS[f].label+'</button>';
-  });
-  h += '</div></div>';
-  h += '<div class="card"><h3>respaldo</h3><p class="small">'+(LOCAL ? 'Tus datos se guardan solo en este dispositivo. Copia un respaldo de vez en cuando.' : 'Tus datos se guardan en tu cuenta de Claude. El respaldo sirve para pasarlos a otra copia de la app.')+'</p>'
-    + '<div class="tools">'+(LOCAL?'<button class="ghost" data-a="share-backup">guardar en archivos</button>':'')+'<button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
-    + (LOCAL ? '<p class="small">'+((S.profile||{}).lastBackup ? 'Último respaldo: '+esc(parse(S.profile.lastBackup).toLocaleDateString("es-MX",{day:"numeric",month:"long"})) : 'Todavía no hay respaldos.')+' Te aviso cada 7 días.</p>' : '')+''
-    + (S.bkMsg ? '<p class="small">'+esc(S.bkMsg)+'</p>' : '')+'</div>';
-  return h;
-}
-function applyBackup(o){
-  var old=Object.keys(S.days);
-  S.habits = clone(o.habits);
-  S.profile = o.profile && typeof o.profile==="object" ? clone(o.profile) : {};
-  S.days = clone(o.days);
-  old.forEach(function(k){ if(!S.days[k]) S.days[k]={}; });
-  saveCfg();
-  Object.keys(S.days).forEach(saveDay);
-}
 function viewHist(){
-  var h = notes()+'<div><p class="eyebrow">Últimas 12 semanas</p><h1>Historial</h1></div>';
+  var h = notes()+'<div><p class="eyebrow">últimas 12 semanas</p><h1>historial</h1></div>';
   if(!S.habits.length) return h+'<p class="empty">Cuando registres hábitos, aquí verás tus rachas y tu constancia.</p>';
   var t=today(), start=addDays(monday(t),-77);
-  h += '<p class="legend"><span><i style="background:var(--done)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span></p><ul class="list">';
+  h += '<p class="legend"><span><i style="background:var(--accent)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span></p><ul class="list">';
   S.habits.forEach(function(x){
-    h += '<li class="card"><h3>'+esc(x.name)+'</h3><div class="stats">'
-      + '<div class="stat"><span class="num">'+streak(x)+'</span><small>racha actual</small></div>'
-      + '<div class="stat"><span class="num">'+bestStreak(x)+'</span><small>mejor racha</small></div>'
-      + '<div class="stat"><span class="num">'+pct30(x)+'%</span><small>últimos 30 días</small></div></div><div class="grid">';
+    var c=consistency(x), wk=isWeek(x);
+    h += '<li class="card"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3></div></div><div class="stats">'
+      + '<div class="stat"><span class="num">'+streak(x)+'</span><small>racha actual'+(wk?' (semanas)':'')+'</small></div>'
+      + '<div class="stat"><span class="num">'+bestStreak(x)+'</span><small>mejor racha'+(wk?' (semanas)':'')+'</small></div>'
+      + '<div class="stat"><span class="num">'+c.v+'</span><small>'+c.l+'</small></div></div><div class="grid">';
     for(var i=0;i<84;i++){
       var dk=addDays(start,i);
       if(dk>t){ h+='<span class="fut"></span>'; continue; }
@@ -485,28 +571,95 @@ function viewHist(){
   return h+'</ul>';
 }
 function viewHabits(){
-  var h = notes()+'<div><p class="eyebrow">Qué registras cada día</p><h1>Hábitos</h1></div>';
+  var h = notes()+'<div><p class="eyebrow">qué registras</p><h1>hábitos</h1></div>';
   if(!S.cfgLoaded) return h+'<p class="empty">Cargando tus hábitos…</p>';
   h += '<ul class="list">';
   S.habits.forEach(function(x,i){
-    var sub = x.type==="check" ? "Sí o no" : "Meta: "+fmt(x.goal)+(x.unit?" "+esc(x.unit):"")+" al día";
-    h += '<li class="card"><div class="mrow"><div class="hname"><h3>'+esc(x.name)+'</h3><span class="streak">'+sub+'</span></div>'
+    var sub = x.type==="check" ? "Sí o no, cada día" : isWeek(x) ? x.goal+(x.goal===1?" vez":" veces")+" por semana" : "Meta: "+fmt(x.goal)+(x.unit?" "+esc(x.unit):"")+" al día";
+    h += '<li class="card"><div class="mrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div></div>'
+      + '<div class="tools"><button class="ghost" data-a="edit-habit" data-id="'+x.id+'">editar</button>'
       + '<button class="mini" data-a="up" data-id="'+x.id+'" aria-label="Subir '+esc(x.name)+'"'+(i===0?' disabled':'')+'>↑</button>'
-      + '<button class="mini" data-a="down" data-id="'+x.id+'" aria-label="Bajar '+esc(x.name)+'"'+(i===S.habits.length-1?' disabled':'')+'>↓</button>'
-      + '<button class="ghost" data-a="edit-habit" data-id="'+x.id+'">Editar</button></div></li>';
+      + '<button class="mini" data-a="down" data-id="'+x.id+'" aria-label="Bajar '+esc(x.name)+'"'+(i===S.habits.length-1?' disabled':'')+'>↓</button></div></li>';
   });
   h += '</ul><button class="primary" data-a="new-habit">Nuevo hábito</button>';
   return h;
 }
-var FONTS = {
-  serif:{label:"serif", css:'"Fraunces",Georgia,"Times New Roman",serif'},
-  sans:{label:"moderna", css:'"Instrument Sans",system-ui,-apple-system,sans-serif'},
-  cond:{label:"condensada", css:'"Barlow Condensed","Arial Narrow",Arial,sans-serif'},
-  mono:{label:"máquina", css:'"IBM Plex Mono",ui-monospace,Menlo,monospace'}
-};
-function fontKey(){ var f=S.profile && S.profile.font; return FONTS[f] ? f : "serif"; }
+function stats(){
+  var keys=Object.keys(S.days).sort(), t=today(), n=S.habits.length, logged=0, full=0, kept=0, first="";
+  keys.forEach(function(k){
+    if(k>t) return;
+    var d=S.days[k], has=false;
+    for(var id in d){ if(Number(d[id])>0){ has=true; break; } }
+    if(!has) return;
+    if(!first) first=k;
+    logged++;
+    var m=metCount(k); kept+=m;
+    var sc=dayScore(k); if(sc.n && sc.m===sc.n) full++;
+  });
+  var anyWeek=S.habits.some(function(h){ return isWeek(h) && bestStreak(h)>0; });
+  return {logged:logged, full:full, kept:kept, first:first, cur:dayStreak(), best:bestDayStreak(), anyWeek:anyWeek, n:n};
+}
+function badges(s){
+  return [
+    {ic:"check", t:"Primer registro", d:"Registra tu primer día", ok:s.logged>=1},
+    {ic:"sol", t:"Una semana", d:"7 días de constancia", ok:s.best>=7},
+    {ic:"hoja", t:"Un mes", d:"30 días de constancia", ok:s.best>=30},
+    {ic:"corazon", t:"Cien días", d:"100 días de constancia", ok:s.best>=100},
+    {ic:"luna", t:"Días redondos", d:"10 días completos", ok:s.full>=10},
+    {ic:"estudio", t:"Cincuenta metas", d:"50 metas cumplidas", ok:s.kept>=50},
+    {ic:"pesa", t:"Semana cumplida", d:"Cumple una meta semanal", ok:s.anyWeek},
+    {ic:"reloj", t:"Bitácora larga", d:"60 días con registro", ok:s.logged>=60}
+  ];
+}
+function viewPerfil(){
+  var pf=S.profile||{}, s=stats(), name=pf.name||"";
+  var since = pf.since || s.first;
+  var h = notes();
+  h += '<div class="who"><button class="avatar" data-a="edit-profile" aria-label="Cambiar foto de perfil">'
+    + (pf.photo ? '<img src="'+esc(pf.photo)+'" alt="">' : esc((name||"?").charAt(0)))+'</button>'
+    + '<div class="hname"><h2>'+esc(name||"tu perfil")+'</h2><div class="meta">'
+    + '<span>'+(pf.email ? esc(pf.email) : 'Sin correo registrado')+'</span>'
+    + '<span>'+(since ? 'En la bitácora desde el '+esc(longDate(since)) : 'Aún sin registros')+'</span></div></div></div>'
+    + '<button class="ghost" data-a="edit-profile">editar perfil</button>';
+  h += '<div class="stats two">'
+    + '<div class="stat"><span class="num">'+s.cur+'</span><small>días de constancia actual</small></div>'
+    + '<div class="stat"><span class="num">'+s.best+'</span><small>mejor constancia</small></div>'
+    + '<div class="stat"><span class="num">'+s.full+'</span><small>días completos</small></div>'
+    + '<div class="stat"><span class="num">'+s.kept+'</span><small>metas cumplidas</small></div></div>';
+  h += '<div class="card"><h3>logros</h3><div class="badges">';
+  badges(s).forEach(function(b){
+    h += '<div class="badge'+(b.ok?' got':'')+'"><span class="ico">'+svg(b.ic)+'</span><span><b>'+esc(b.t)+'</b><small>'+(b.ok?'Conseguido':esc(b.d))+'</small></span></div>';
+  });
+  h += '</div></div>';
+  if(s.n){
+    h += '<div class="card"><h3>acumulado</h3><ul class="tot">';
+    var keys=Object.keys(S.days);
+    S.habits.forEach(function(x){
+      var sum=0, times=0;
+      keys.forEach(function(k){ sum+=val(x,k); if(met(x,k)) times++; });
+      var right = x.type!=="count" ? times+(times===1?' vez':' veces') : fmt(r2(sum))+(x.unit?' '+esc(x.unit):'');
+      h += '<li><span>'+esc(x.name)+'</span><b class="num">'+right+'</b></li>';
+    });
+    h += '</ul></div>';
+  }
+  h += '<div class="card"><h3>personalizar</h3><div class="setrow"><span>Color</span><div class="swatches">';
+  Object.keys(ACCENTS).forEach(function(a){
+    h += '<button class="sw'+(accentKey()===a?' on':'')+'" data-a="accent" data-v="'+a+'" aria-label="Color '+ACCENTS[a].label+'" aria-pressed="'+(accentKey()===a)+'"><span style="background:'+ACCENTS[a].a+'"></span></button>';
+  });
+  h += '</div></div><div class="setrow"><span>Tipografía</span><div class="tools">';
+  Object.keys(FONTS).forEach(function(f){
+    h += '<button class="chip'+(fontKey()===f?' on':'')+'" data-a="font" data-v="'+f+'" aria-pressed="'+(fontKey()===f)+'" style="font-family:'+esc(FONTS[f].css)+'">'+FONTS[f].label+'</button>';
+  });
+  h += '</div></div></div>';
+  h += '<div class="card"><h3>respaldo</h3><p class="small">'+(LOCAL ? 'Tus datos se guardan solo en este dispositivo.' : 'Tus datos se guardan en tu cuenta de Claude.')+'</p>'
+    + '<div class="tools">'+(LOCAL?'<button class="ghost" data-a="share-backup">guardar en archivos</button>':'')+'<button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
+    + (LOCAL ? '<p class="small">'+(pf.lastBackup ? 'Último respaldo: '+esc(longDate(pf.lastBackup,{day:"numeric",month:"long"})) : 'Todavía no hay respaldos.')+' Te aviso cada 7 días.</p>' : '')
+    + (S.bkMsg ? '<p class="small">'+esc(S.bkMsg)+'</p>' : '')+'</div>';
+  h += '<p class="small">JLG Habits Journal · versión '+VERSION+'</p>';
+  return h;
+}
 function render(){
-  document.documentElement.style.setProperty("--display", FONTS[fontKey()].css);
+  applyLook();
   app.innerHTML = S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : viewHoy();
   ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v); });
 }
@@ -517,21 +670,35 @@ function route(){
 }
 window.addEventListener("hashchange", route);
 
-/* ---------- dialogs ---------- */
+/* ---------- habit dialog ---------- */
 function find(id){ for(var i=0;i<S.habits.length;i++) if(S.habits[i].id===id) return S.habits[i]; return null; }
+(function(){
+  var h="";
+  ICON_NAMES.forEach(function(n){ h+='<label><input type="radio" name="hf-icon" value="'+n+'" aria-label="'+n+'"><span>'+svg(n)+'</span></label>'; });
+  $("hf-icons").innerHTML=h;
+})();
+function pickIcon(n){ var r=document.querySelector('input[name="hf-icon"][value="'+n+'"]'); if(r) r.checked=true; }
 function syncType(){
-  var c = $("hf-type").value==="count";
-  $("hf-countfields").hidden = !c; $("hf-steplabel").hidden = !c;
+  var t=$("hf-type").value, c=t==="count", w=t==="week";
+  $("hf-countfields").hidden = !(c||w);
+  $("hf-unitlabel").hidden = !c;
+  $("hf-steplabel").hidden = !c;
+  $("hf-goallabel").textContent = w ? "Veces por semana" : "Meta diaria";
+  $("hf-goal").max = w ? 7 : "";
 }
 $("hf-type").addEventListener("change", syncType);
+$("hf-name").addEventListener("input", function(){ if(!editing && !document.querySelector('input[name="hf-icon"]:checked.user')) pickIcon(guessIcon(this.value)); });
+$("hf-icons").addEventListener("change", function(e){ document.querySelectorAll('input[name="hf-icon"]').forEach(function(r){ r.classList.remove("user"); }); e.target.classList.add("user"); });
 function openHabit(h){
   editing = h ? h.id : null; delArmed = false;
-  $("hf-title").textContent = h ? "Editar hábito" : "Nuevo hábito";
+  $("hf-title").textContent = h ? "editar hábito" : "nuevo hábito";
   $("hf-name").value = h ? h.name : "";
   $("hf-type").value = h ? h.type : "count";
-  $("hf-goal").value = h && h.type==="count" ? h.goal : "";
+  $("hf-goal").value = h && h.type!=="check" ? h.goal : "";
   $("hf-unit").value = h ? (h.unit||"") : "";
   $("hf-step").value = h && h.type==="count" ? h.step : "";
+  document.querySelectorAll('input[name="hf-icon"]').forEach(function(r){ r.classList.remove("user"); r.checked=false; });
+  pickIcon(h ? iconOf(h) : "check");
   $("hf-del").hidden = !h; $("hf-del").textContent = "Eliminar";
   $("hf-err").hidden = true;
   syncType();
@@ -541,53 +708,23 @@ $("form-habit").addEventListener("submit", function(ev){
   ev.preventDefault();
   var name=$("hf-name").value.trim(), type=$("hf-type").value;
   var goal=Number($("hf-goal").value), step=Number($("hf-step").value), unit=$("hf-unit").value.trim();
+  var ic=document.querySelector('input[name="hf-icon"]:checked'); ic = ic ? ic.value : guessIcon(name);
   var err="";
   if(!name) err="Escribe un nombre para el hábito.";
   else if(type==="count" && !(goal>0)) err="Escribe una meta diaria mayor que cero.";
+  else if(type==="week" && !(goal>=1 && goal<=7)) err="Escribe cuántas veces por semana, de 1 a 7.";
   if(err){ $("hf-err").textContent=err; $("hf-err").hidden=false; return; }
   if(type==="count" && !(step>0)) step = goal>=100 ? r2(goal/10) : 1;
-  var data = type==="check" ? {name:name,type:"check"} : {name:name,type:"count",goal:r2(goal),unit:unit,step:r2(step)};
+  var data = type==="check" ? {name:name,type:"check",icon:ic}
+    : type==="week" ? {name:name,type:"week",goal:Math.round(goal),icon:ic}
+    : {name:name,type:"count",goal:r2(goal),unit:unit,step:r2(step),icon:ic};
   if(editing){
     var h=find(editing);
-    if(h){ var keep={id:h.id,since:h.since}; var i=S.habits.indexOf(h); S.habits[i]=Object.assign(keep,data); }
+    if(h){ var i=S.habits.indexOf(h); S.habits[i]=Object.assign({id:h.id,since:h.since},data); }
   }else{
     S.habits.push(Object.assign({id:"h"+Date.now().toString(36), since:today()}, data));
   }
   saveCfg(); $("dlg-habit").close(); render();
-});
-var restoreArmed = false;
-function markBackup(){ S.profile=Object.assign({},S.profile||{},{lastBackup:today()}); saveCfg(); }
-function shareBackup(){
-  var name="jlg-habitos-"+today()+".json", txt=backupText(), file=null;
-  try{ file=new File([txt],name,{type:"application/json"}); }catch(e){}
-  var done=function(){ markBackup(); S.bkMsg="Respaldo guardado."; render(); };
-  var fallback=function(){ S.bkMsg="Este navegador no deja guardar el archivo; usa copiar respaldo."; render(); };
-  try{
-    if(file && navigator.canShare && navigator.canShare({files:[file]})){
-      navigator.share({files:[file], title:"Respaldo de hábitos"}).then(done, function(e){ if(!e || e.name!=="AbortError") fallback(); });
-    }else if(navigator.share){
-      navigator.share({title:"Respaldo de hábitos", text:txt}).then(done, function(e){ if(!e || e.name!=="AbortError") fallback(); });
-    }else fallback();
-  }catch(e){ fallback(); }
-}
-$("bk-file").addEventListener("change", function(){
-  var f=this.files && this.files[0]; if(!f) return;
-  f.text().then(function(t){ $("bk-text").value=t; $("bk-err").hidden=true; }, function(){ $("bk-err").textContent="No se pudo leer ese archivo."; $("bk-err").hidden=false; });
-});
-$("form-name").addEventListener("submit", function(ev){
-  ev.preventDefault();
-  S.profile = Object.assign({}, S.profile||{}, {name: $("pf-name").value.trim()});
-  saveCfg(); $("dlg-name").close(); render();
-});
-$("form-restore").addEventListener("submit", function(ev){
-  ev.preventDefault();
-  var o=null;
-  try{ o=JSON.parse($("bk-text").value); }catch(e){}
-  if(!o || !Array.isArray(o.habits) || !o.days || typeof o.days!=="object" || Array.isArray(o.days)){
-    $("bk-err").textContent="Ese texto no es un respaldo de esta app. Pega el texto completo que copiaste."; $("bk-err").hidden=false; return;
-  }
-  if(!restoreArmed){ restoreArmed=true; $("bk-go").textContent="Confirmar: reemplazar todo"; return; }
-  applyBackup(o); S.bkMsg="Respaldo restaurado."; $("dlg-restore").close(); render();
 });
 $("form-val").addEventListener("submit", function(ev){
   ev.preventDefault();
@@ -595,39 +732,134 @@ $("form-val").addEventListener("submit", function(ev){
   if(h) setVal(h, valFor.k, $("val-input").value);
   $("dlg-val").close();
 });
+function openVal(h,k){
+  valFor={id:h.id,k:k};
+  $("val-title").textContent=h.name;
+  $("val-label").textContent="Total del día"+(h.unit?" ("+h.unit+")":"");
+  $("val-input").value = val(h,k) || "";
+  $("dlg-val").showModal(); $("val-input").focus(); $("val-input").select();
+}
 
+/* ---------- profile dialog ---------- */
+var pendingPhoto = undefined;
+function openProfile(){
+  var pf=S.profile||{};
+  pendingPhoto = undefined;
+  $("pf-name").value = pf.name||"";
+  $("pf-email").value = pf.email||"";
+  $("pf-emailnote").textContent = LOCAL ? "Por ahora solo se muestra en tu perfil. Con la sincronización en la nube será tu correo para iniciar sesión." : "Se muestra en tu perfil.";
+  $("pf-photo").value = "";
+  $("pf-delphoto").hidden = !pf.photo;
+  $("pf-err").hidden = true;
+  $("dlg-profile").showModal();
+}
+function shrinkPhoto(file){
+  return new Promise(function(res, rej){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      var S2=240, c=document.createElement("canvas"); c.width=S2; c.height=S2;
+      var side=Math.min(img.naturalWidth,img.naturalHeight), sx=(img.naturalWidth-side)/2, sy=(img.naturalHeight-side)/2;
+      c.getContext("2d").drawImage(img,sx,sy,side,side,0,0,S2,S2);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL("image/jpeg",0.82));
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(); };
+    img.src=url;
+  });
+}
+$("pf-photo").addEventListener("change", function(){
+  var f=this.files && this.files[0]; if(!f) return;
+  shrinkPhoto(f).then(function(d){ pendingPhoto=d; $("pf-err").hidden=true; }, function(){ $("pf-err").textContent="No se pudo leer esa imagen. Prueba con otra foto."; $("pf-err").hidden=false; });
+});
+$("form-profile").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var email=$("pf-email").value.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("pf-err").textContent="Ese correo no parece válido. Revisa que tenga @ y dominio."; $("pf-err").hidden=false; return; }
+  var patch={name:$("pf-name").value.trim(), email:email};
+  if(pendingPhoto!==undefined) patch.photo=pendingPhoto;
+  setProfile(patch); $("dlg-profile").close(); render();
+});
+
+/* ---------- backup ---------- */
+function backupText(){ return JSON.stringify({app:"bitacora-habitos", v:2, habits:S.habits, profile:S.profile, days:S.days}); }
+function markBackup(){ setProfile({lastBackup:today()}); }
+function shareBackup(){
+  var name="jlg-habitos-"+today()+".json", txt=backupText(), file=null;
+  try{ file=new File([txt],name,{type:"application/json"}); }catch(e){}
+  var done=function(){ markBackup(); S.bkMsg="Respaldo guardado."; render(); };
+  var fallback=function(){ S.bkMsg="Este navegador no deja guardar el archivo; usa copiar respaldo."; render(); };
+  var fail=function(e){ if(!e || e.name!=="AbortError") fallback(); };
+  try{
+    if(file && navigator.canShare && navigator.canShare({files:[file]})) navigator.share({files:[file], title:"Respaldo de hábitos"}).then(done, fail);
+    else if(navigator.share) navigator.share({title:"Respaldo de hábitos", text:txt}).then(done, fail);
+    else fallback();
+  }catch(e){ fallback(); }
+}
+function applyBackup(o){
+  var old=Object.keys(S.days);
+  S.habits = clone(o.habits);
+  S.profile = o.profile && typeof o.profile==="object" ? clone(o.profile) : {};
+  S.days = clone(o.days);
+  old.forEach(function(k){ if(!S.days[k]) S.days[k]={}; });
+  saveCfg();
+  Object.keys(S.days).forEach(saveDay);
+}
+$("bk-file").addEventListener("change", function(){
+  var f=this.files && this.files[0]; if(!f) return;
+  f.text().then(function(t){ $("bk-text").value=t; $("bk-err").hidden=true; }, function(){ $("bk-err").textContent="No se pudo leer ese archivo."; $("bk-err").hidden=false; });
+});
+$("form-restore").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var o=null;
+  try{ o=JSON.parse($("bk-text").value); }catch(e){}
+  if(!o || !Array.isArray(o.habits) || !o.days || typeof o.days!=="object" || Array.isArray(o.days)){
+    $("bk-err").textContent="Ese texto no es un respaldo de esta app. Elige el archivo o pega el texto completo."; $("bk-err").hidden=false; return;
+  }
+  if(!restoreArmed){ restoreArmed=true; $("bk-go").textContent="Confirmar: reemplazar todo"; return; }
+  applyBackup(o); S.bkMsg="Respaldo restaurado."; $("dlg-restore").close(); render();
+});
+
+/* ---------- steps from Health ---------- */
+function numberFrom(t){ var m=String(t||"").replace(/[,\s]/g,"").match(/\d+(\.\d+)?/); return m ? Number(m[0]) : NaN; }
+function pasteInto(h){
+  var k=S.sel;
+  var fallback=function(){ S.ok=""; openVal(h,k); };
+  try{
+    navigator.clipboard.readText().then(function(t){
+      var n=numberFrom(t);
+      if(!(n>=0)){ fallback(); return; }
+      setVal(h,k,n); S.ok="Se registraron "+fmt(n)+(h.unit?" "+h.unit:"")+" en "+h.name+"."; render();
+    }, fallback);
+  }catch(e){ fallback(); }
+}
+function processParams(){
+  if(paramsDone) return; paramsDone=true;
+  var q; try{ q=new URLSearchParams(location.search); }catch(e){ return; }
+  var who=q.get("registrar"), v=numberFrom(q.get("valor"));
+  if(!who || !(v>=0)) return;
+  var w=plain(who), h=null;
+  S.habits.forEach(function(x){ if(!h && (x.id===who || plain(x.name)===w || (x.type==="count" && plain(x.unit)===w))) h=x; });
+  try{ history.replaceState(null,"",location.pathname+location.hash); }catch(e){}
+  if(!h){ S.note="No encontré un hábito llamado “"+who+"”."; render(); return; }
+  setVal(h,today(),v); S.ok="Se registraron "+fmt(v)+(h.unit?" "+h.unit:"")+" en "+h.name+" desde el atajo."; render();
+}
+
+/* ---------- clicks ---------- */
 document.addEventListener("click", function(ev){
   var el = ev.target.closest("[data-a]"); if(!el) return;
   var a=el.dataset.a, h=el.dataset.id ? find(el.dataset.id) : null, k=S.sel, i;
+  if(a!=="paste" && S.ok){ S.ok=""; }
   if(a==="prev"){ S.sel=addDays(k,-1); render(); }
   else if(a==="next"){ if(k<today()){ S.sel=addDays(k,1); render(); } }
   else if(a==="pick"){ S.sel=el.dataset.k; render(); }
   else if(a==="toggle" && h){ setVal(h,k, met(h,k)?0:1); }
   else if(a==="inc" && h){ setVal(h,k, val(h,k)+h.step); }
   else if(a==="dec" && h){ setVal(h,k, val(h,k)-h.step); }
-  else if(a==="edit-val" && h){
-    valFor={id:h.id,k:k};
-    $("val-title").textContent=h.name;
-    $("val-label").textContent="Total del día"+(h.unit?" ("+h.unit+")":"");
-    $("val-input").value = val(h,k) || "";
-    $("dlg-val").showModal(); $("val-input").focus(); $("val-input").select();
-  }
-  else if(a==="close-val"){ $("dlg-val").close(); }
-  else if(a==="font"){ S.profile = Object.assign({}, S.profile||{}, {font: el.dataset.f}); saveCfg(); render(); }
-  else if(a==="edit-name"){ $("pf-name").value = (S.profile&&S.profile.name)||""; $("dlg-name").showModal(); }
-  else if(a==="close-name"){ $("dlg-name").close(); }
-  else if(a==="snooze-backup"){ S.profile=Object.assign({},S.profile||{},{backupSnooze:today()}); saveCfg(); render(); }
-  else if(a==="share-backup"){ shareBackup(); }
-  else if(a==="copy-backup"){
-    var txt = backupText();
-    var fail = function(){ $("bk-text").value=txt; $("bk-err").hidden=true; $("dlg-restore").showModal(); $("bk-text").select(); S.bkMsg="No se pudo copiar automáticamente: copia el texto del cuadro."; render(); };
-    try{ navigator.clipboard.writeText(txt).then(function(){ markBackup(); S.bkMsg="Respaldo copiado. Pégalo en tus notas para guardarlo."; render(); }, fail); }catch(e){ fail(); }
-  }
-  else if(a==="open-restore"){ restoreArmed=false; $("bk-text").value=""; $("bk-err").hidden=true; $("bk-go").textContent="Reemplazar mis datos"; $("dlg-restore").showModal(); }
-  else if(a==="close-restore"){ $("dlg-restore").close(); }
+  else if(a==="edit-val" && h){ openVal(h,k); }
+  else if(a==="paste" && h){ pasteInto(h); }
+  else if(a==="close"){ $(el.dataset.d).close(); }
   else if(a==="new-habit"){ openHabit(null); }
   else if(a==="edit-habit" && h){ openHabit(h); }
-  else if(a==="close-habit"){ $("dlg-habit").close(); }
   else if(a==="del-habit"){
     if(!delArmed){ delArmed=true; el.textContent="Confirmar: eliminar"; return; }
     S.habits = S.habits.filter(function(x){ return x.id!==editing; });
@@ -637,18 +869,33 @@ document.addEventListener("click", function(ev){
     i=S.habits.indexOf(h); var j=a==="up"?i-1:i+1;
     if(j>=0 && j<S.habits.length){ S.habits[i]=S.habits[j]; S.habits[j]=h; saveCfg(); render(); }
   }
+  else if(a==="edit-profile"){ openProfile(); }
+  else if(a==="del-photo"){ pendingPhoto=""; el.hidden=true; }
+  else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
+  else if(a==="accent"){ setProfile({accent:el.dataset.v}); render(); }
+  else if(a==="snooze-backup"){ setProfile({backupSnooze:today()}); render(); }
+  else if(a==="share-backup"){ shareBackup(); }
+  else if(a==="copy-backup"){
+    var txt = backupText();
+    var fail = function(){ $("bk-text").value=txt; $("bk-err").hidden=true; restoreArmed=false; $("bk-go").textContent="Reemplazar mis datos"; $("dlg-restore").showModal(); $("bk-text").select(); S.bkMsg="No se pudo copiar automáticamente: copia el texto del cuadro."; render(); };
+    try{ navigator.clipboard.writeText(txt).then(function(){ markBackup(); S.bkMsg="Respaldo copiado. Pégalo en tus notas para guardarlo."; render(); }, fail); }catch(e){ fail(); }
+  }
+  else if(a==="open-restore"){ restoreArmed=false; $("bk-text").value=""; $("bk-file").value=""; $("bk-err").hidden=true; $("bk-go").textContent="Reemplazar mis datos"; $("dlg-restore").showModal(); }
 });
 
-/* ---------- storage ---------- */
+/* ---------- start ---------- */
 function start(){
-  if(LOCAL){ loadLocal(); try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){} route(); return; }
+  if(LOCAL){
+    loadLocal();
+    try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+    route(); processParams(); return;
+  }
   route();
   var slow = setTimeout(function(){
     S.note = S.cfgLoaded ? "No se pudo confirmar con el guardado; lo que ves puede estar desactualizado." : "Aún no se pueden leer tus datos guardados. Se mostrarán en cuanto haya conexión.";
     render();
   }, 10000);
-  var settle = function(){ clearTimeout(slow); if(S.note){ S.note=""; } };
-  if(!window.claude || !window.claude.use){ offline(slow); return; }
+  var settle = function(){ clearTimeout(slow); S.note=""; };
   window.claude.use("db").then(function(d){
     if(!d){ offline(slow); return; }
     db=d; cfgRef=db.doc("app/config"); daysCol=db.collection("days");
@@ -660,7 +907,7 @@ function start(){
         S.profile = data && data.profile && typeof data.profile==="object" ? clone(data.profile) : {};
       }
       S.cfgLoaded = true;
-      if(!snap.metadata || !snap.metadata.fromCache) settle();
+      if(!snap.metadata || !snap.metadata.fromCache){ settle(); processParams(); }
       render();
     }, onErr);
     daysCol.onSnapshot(function(qs){
