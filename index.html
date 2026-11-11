@@ -264,10 +264,31 @@ legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
   </form>
 </dialog>
 
+<dialog id="dlg-login">
+  <form id="form-login">
+    <h3>tu cuenta</h3>
+    <p class="small">Con tu cuenta, tus datos se guardan en la nube y los ves en el iPhone, la compu o donde entres.</p>
+    <label for="lg-email">Correo
+      <input id="lg-email" type="email" maxlength="80" autocomplete="email" inputmode="email" placeholder="tu@correo.com">
+    </label>
+    <label for="lg-pass">Contraseña (mínimo 8 caracteres)
+      <input id="lg-pass" type="password" maxlength="72" autocomplete="current-password">
+    </label>
+    <p class="err" id="lg-err" hidden></p>
+    <p class="note ok" id="lg-msg" hidden></p>
+    <div class="actions">
+      <button type="button" class="ghost" data-a="close" data-d="dlg-login">Cancelar</button>
+      <button type="button" class="ghost" id="lg-new">Crear cuenta</button>
+      <button type="submit" class="primary" id="lg-go">Entrar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 (function(){
 "use strict";
-var VERSION = "1.4";
+var VERSION = "1.5";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -402,7 +423,7 @@ function persistLocal(){
 var pend = {};
 function pending(key){ var p=pend[key]; return !!p && (p.dirty||p.busy); }
 function save(key, ref, getData){
-  if(LOCAL){ persistLocal(); return; }
+  if(LOCAL){ persistLocal(); if(sb && user){ markOut(key); schedulePush(); } return; }
   if(!ref) return;
   var p = pend[key] || (pend[key]={dirty:false,busy:false,timer:0});
   p.dirty = true;
@@ -483,7 +504,7 @@ function tally(n){
   return s+'</svg>';
 }
 function backupDue(){
-  if(!LOCAL || !S.habits.length) return false;
+  if(!LOCAL || !S.habits.length || user) return false;
   var pf=S.profile||{}, t=today();
   if(pf.backupSnooze && pf.backupSnooze>=t) return false;
   return !pf.lastBackup || pf.lastBackup<=addDays(t,-7);
@@ -516,7 +537,7 @@ function viewHoy(){
     + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div></header>';
   if(!S.cfgLoaded){ return h+'<p class="empty">Cargando tus hábitos…</p>'; }
   if(!S.habits.length){
-    return h+'<div class="card"><p class="empty">Todavía no hay hábitos en tu bitácora.</p><button class="primary" data-a="new-habit">Crear el primer hábito</button></div>';
+    return h+'<div class="card"><p class="empty">Todavía no hay hábitos en tu bitácora.</p><button class="primary" data-a="new-habit">Crear el primer hábito</button>'+(sb && !user ? '<button class="ghost" data-a="login">Ya tengo cuenta: iniciar sesión</button>' : '')+'</div>';
   }
   var mon=monday(k);
   h += '<ul class="list">';
@@ -618,7 +639,7 @@ function viewPerfil(){
   h += '<div class="who"><button class="avatar" data-a="edit-profile" aria-label="Cambiar foto de perfil">'
     + (pf.photo ? '<img src="'+esc(pf.photo)+'" alt="">' : esc((name||"?").charAt(0)))+'</button>'
     + '<div class="hname"><h2>'+esc(name||"tu perfil")+'</h2><div class="meta">'
-    + '<span>'+(pf.email ? esc(pf.email) : 'Sin correo registrado')+'</span>'
+    + '<span>'+(user && user.email ? 'Correo registrado: '+esc(user.email) : pf.email ? esc(pf.email) : 'Sin correo registrado')+'</span>'
     + '<span>'+(since ? 'En la bitácora desde el '+esc(longDate(since)) : 'Aún sin registros')+'</span></div></div></div>'
     + '<button class="ghost" data-a="edit-profile">editar perfil</button>';
   h += '<div class="stats two">'
@@ -642,6 +663,13 @@ function viewPerfil(){
     });
     h += '</ul></div>';
   }
+  if(LOCAL){
+    h += '<div class="card"><h3>cuenta</h3>';
+    if(!sb) h += '<p class="small">No se pudo conectar con la nube. Revisa tu internet y vuelve a abrir la app.</p>';
+    else if(!user) h += '<p class="small">Crea tu cuenta o inicia sesión para tener tus datos en el iPhone, la compu y donde quieras, sin pasar respaldos.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div>';
+    else h += '<p class="small">Sesión iniciada como <b>'+esc(user.email||"")+'</b>.</p><p class="small">'+esc(syncLabel())+'</p><div class="tools"><button class="ghost" data-a="sync-now">sincronizar ahora</button><button class="danger" data-a="logout">cerrar sesión</button></div>';
+    h += '</div>';
+  }
   h += '<div class="card"><h3>personalizar</h3><div class="setrow"><span>Color</span><div class="swatches">';
   Object.keys(ACCENTS).forEach(function(a){
     h += '<button class="sw'+(accentKey()===a?' on':'')+'" data-a="accent" data-v="'+a+'" aria-label="Color '+ACCENTS[a].label+'" aria-pressed="'+(accentKey()===a)+'"><span style="background:'+ACCENTS[a].a+'"></span></button>';
@@ -651,7 +679,7 @@ function viewPerfil(){
     h += '<button class="chip'+(fontKey()===f?' on':'')+'" data-a="font" data-v="'+f+'" aria-pressed="'+(fontKey()===f)+'" style="font-family:'+esc(FONTS[f].css)+'">'+FONTS[f].label+'</button>';
   });
   h += '</div></div></div>';
-  h += '<div class="card"><h3>respaldo</h3><p class="small">'+(LOCAL ? 'Tus datos se guardan solo en este dispositivo.' : 'Tus datos se guardan en tu cuenta de Claude.')+'</p>'
+  h += '<div class="card"><h3>respaldo</h3><p class="small">'+(!LOCAL ? 'Tus datos se guardan en tu cuenta de Claude.' : user ? 'Tus datos se guardan en este dispositivo y en la nube. El respaldo es opcional.' : 'Tus datos se guardan solo en este dispositivo.')+'</p>'
     + '<div class="tools">'+(LOCAL?'<button class="ghost" data-a="share-backup">guardar en archivos</button>':'')+'<button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
     + (LOCAL ? '<p class="small">'+(pf.lastBackup ? 'Último respaldo: '+esc(longDate(pf.lastBackup,{day:"numeric",month:"long"})) : 'Todavía no hay respaldos.')+' Te aviso cada 7 días.</p>' : '')
     + (S.bkMsg ? '<p class="small">'+esc(S.bkMsg)+'</p>' : '')+'</div>';
@@ -747,6 +775,7 @@ function openProfile(){
   pendingPhoto = undefined;
   $("pf-name").value = pf.name||"";
   $("pf-email").value = pf.email||"";
+  $("pf-email").parentNode.hidden = !!user;
   $("pf-emailnote").textContent = LOCAL ? "Por ahora solo se muestra en tu perfil. Con la sincronización en la nube será tu correo para iniciar sesión." : "Se muestra en tu perfil.";
   $("pf-photo").value = "";
   $("pf-delphoto").hidden = !pf.photo;
@@ -774,8 +803,8 @@ $("pf-photo").addEventListener("change", function(){
 $("form-profile").addEventListener("submit", function(ev){
   ev.preventDefault();
   var email=$("pf-email").value.trim();
-  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("pf-err").textContent="Ese correo no parece válido. Revisa que tenga @ y dominio."; $("pf-err").hidden=false; return; }
-  var patch={name:$("pf-name").value.trim(), email:email};
+  if(!user && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("pf-err").textContent="Ese correo no parece válido. Revisa que tenga @ y dominio."; $("pf-err").hidden=false; return; }
+  var patch={name:$("pf-name").value.trim(), email: user ? (user.email||email) : email};
   if(pendingPhoto!==undefined) patch.photo=pendingPhoto;
   setProfile(patch); $("dlg-profile").close(); render();
 });
@@ -844,11 +873,155 @@ function processParams(){
   setVal(h,today(),v); S.ok="Se registraron "+fmt(v)+(h.unit?" "+h.unit:"")+" en "+h.name+" desde el atajo."; render();
 }
 
+/* ---------- cloud sync (Supabase) ---------- */
+var SB_URL = "https://sbabjzwmosdcvgzlzbiy.supabase.co";
+var SB_KEY = "sb_publishable_iI7LR8w1QJwGlh8D5zr1KA_C2I2FIGh";
+var sb = null, user = null, OKEY = "bitacora-outbox-v1", out = {cfg:false, days:{}}, pushTimer = 0, syncing = false;
+S.sync = ""; S.syncAt = 0;
+try{ if(LOCAL && window.supabase && window.supabase.createClient) sb = window.supabase.createClient(SB_URL, SB_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storageKey:"jlg-auth"}}); }catch(e){ sb = null; }
+function loadOut(){ try{ var o=JSON.parse(localStorage.getItem(OKEY)||"null"); if(o && o.days) out=o; }catch(e){} }
+function saveOut(){ try{ localStorage.setItem(OKEY, JSON.stringify(out)); }catch(e){} }
+function markOut(key){ if(key==="cfg") out.cfg=true; else if(key.indexOf("d:")===0) out.days[key.slice(2)]=true; saveOut(); }
+function schedulePush(){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){ syncNow(false); }, 900); }
+function syncLabel(){
+  if(!user) return "";
+  if(S.sync==="busy") return "Sincronizando…";
+  if(S.sync==="err") return "Sin conexión con la nube. Tus cambios se guardan aquí y se suben al volver la conexión.";
+  var pend = out.cfg || Object.keys(out.days).length;
+  if(pend) return "Hay cambios por subir.";
+  return S.syncAt ? "Todo sincronizado." : "";
+}
+async function pushOut(){
+  var sentCfg = out.cfg ? JSON.stringify([S.habits, S.profile]) : null;
+  var keys = Object.keys(out.days), sent = {};
+  if(sentCfg){
+    var r1 = await sb.from("user_config").upsert({user_id:user.id, habits:S.habits, profile:S.profile, updated_at:new Date().toISOString()});
+    if(r1.error) throw r1.error;
+    if(JSON.stringify([S.habits, S.profile])===sentCfg) out.cfg=false;
+  }
+  if(keys.length){
+    var rows = keys.map(function(k){ sent[k]=JSON.stringify(S.days[k]||{}); return {user_id:user.id, day:k, v:S.days[k]||{}, updated_at:new Date().toISOString()}; });
+    for(var i=0;i<rows.length;i+=200){
+      var r2 = await sb.from("day_logs").upsert(rows.slice(i,i+200));
+      if(r2.error) throw r2.error;
+    }
+    keys.forEach(function(k){ if(JSON.stringify(S.days[k]||{})===sent[k]) delete out.days[k]; });
+  }
+  saveOut();
+}
+async function pullAll(){
+  var c = await sb.from("user_config").select("habits,profile").eq("user_id", user.id).maybeSingle();
+  if(c.error) throw c.error;
+  var d = await sb.from("day_logs").select("day,v").eq("user_id", user.id).range(0, 9999);
+  if(d.error) throw d.error;
+  return {cfg:c.data, days:d.data||[]};
+}
+function applyPull(p){
+  if(p.cfg && !out.cfg){
+    S.habits = Array.isArray(p.cfg.habits) ? p.cfg.habits : [];
+    S.profile = p.cfg.profile && typeof p.cfg.profile==="object" ? p.cfg.profile : {};
+  }
+  p.days.forEach(function(r){ if(!out.days[r.day]) S.days[r.day] = r.v || {}; });
+  persistLocal();
+}
+async function syncNow(pullToo){
+  if(!sb || !user || syncing) return;
+  syncing = true; S.sync="busy";
+  try{
+    await pushOut();
+    if(pullToo) applyPull(await pullAll());
+    S.sync="ok"; S.syncAt=Date.now();
+  }catch(e){ S.sync="err"; }
+  syncing = false;
+  if(!document.querySelector("dialog[open]")) render();
+}
+async function afterLogin(){
+  S.sync="busy"; render();
+  try{
+    var p = await pullAll();
+    if(!p.cfg){
+      out.cfg = true;
+      Object.keys(S.days).forEach(function(k){ out.days[k]=true; });
+      saveOut();
+      await pushOut();
+      S.ok = S.habits.length ? "Listo: tus hábitos y registros ya están en la nube." : "Sesión iniciada. Crea tus hábitos y se guardarán en la nube.";
+    }else{
+      try{ if(S.habits.length || Object.keys(S.days).length) localStorage.setItem("bitacora-antes-de-sesion", JSON.stringify({habits:S.habits, profile:S.profile, days:S.days})); }catch(e){}
+      S.habits=[]; S.profile={}; S.days={}; out={cfg:false, days:{}}; saveOut();
+      applyPull(p);
+      S.ok = "Sesión iniciada. Se cargaron tus datos de la nube.";
+    }
+    if(user.email && S.profile.email!==user.email){ S.profile = Object.assign({}, S.profile, {email:user.email}); markOut("cfg"); persistLocal(); await pushOut(); }
+    S.sync="ok"; S.syncAt=Date.now();
+  }catch(e){ S.sync="err"; }
+  render();
+}
+function startSync(){
+  if(!sb) return;
+  loadOut();
+  sb.auth.getSession().then(function(r){
+    var s = r && r.data && r.data.session;
+    if(s && s.user){ user = s.user; syncNow(true); }
+  });
+  sb.auth.onAuthStateChange(function(ev, session){
+    if(ev==="SIGNED_OUT"){ user=null; render(); }
+    else if(session && session.user){ user = session.user; }
+  });
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") syncNow(true); });
+  window.addEventListener("online", function(){ syncNow(true); });
+}
+/* login dialog */
+function openLogin(){
+  $("lg-email").value = (S.profile && S.profile.email) || "";
+  $("lg-pass").value = "";
+  $("lg-err").hidden = true; $("lg-msg").hidden = true;
+  $("lg-go").disabled=false; $("lg-new").disabled=false;
+  $("dlg-login").showModal();
+}
+function lgErr(t){ $("lg-err").textContent=t; $("lg-err").hidden=false; $("lg-go").disabled=false; $("lg-new").disabled=false; }
+function lgRead(){
+  var em=$("lg-email").value.trim().toLowerCase(), pw=$("lg-pass").value;
+  if(!sb){ lgErr("No se pudo conectar con la nube. Revisa tu internet y vuelve a abrir la app."); return null; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ lgErr("Escribe un correo válido."); return null; }
+  if(pw.length<8){ lgErr("La contraseña debe tener al menos 8 caracteres."); return null; }
+  $("lg-err").hidden=true; $("lg-msg").hidden=true; $("lg-go").disabled=true; $("lg-new").disabled=true;
+  return {email:em, password:pw};
+}
+$("form-login").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var c=lgRead(); if(!c) return;
+  sb.auth.signInWithPassword(c).then(function(r){
+    if(r.error || !r.data || !r.data.user){
+      var m=(r.error && r.error.message)||"";
+      lgErr(/confirm/i.test(m) ? "Primero confirma tu correo: toca el enlace que te mandamos y vuelve a intentar." : "Correo o contraseña incorrectos."); return;
+    }
+    user=r.data.user; $("dlg-login").close(); afterLogin();
+  }, function(){ lgErr("Sin conexión. Intenta de nuevo."); });
+});
+$("lg-new").addEventListener("click", function(){
+  var c=lgRead(); if(!c) return;
+  sb.auth.signUp({email:c.email, password:c.password, options:{emailRedirectTo:"https://jlghabitstracker.github.io/"}}).then(function(r){
+    if(r.error){ lgErr(/registered|exists/i.test(r.error.message) ? "Ese correo ya tiene cuenta: toca Entrar." : /rate|limit|seconds/i.test(r.error.message) ? "Demasiados intentos. Espera unos minutos." : "No se pudo crear la cuenta: "+r.error.message); return; }
+    if(r.data && r.data.session && r.data.user){ user=r.data.user; $("dlg-login").close(); afterLogin(); return; }
+    $("lg-go").disabled=false; $("lg-new").disabled=false;
+    $("lg-msg").textContent="Cuenta creada. Te mandamos un correo a "+c.email+": toca el enlace para confirmarla (puede abrirse en Safari, está bien) y luego regresa aquí y toca Entrar.";
+    $("lg-msg").hidden=false;
+  }, function(){ lgErr("Sin conexión. Intenta de nuevo."); });
+});
+var logoutArmed = false;
+function logout(el){
+  if(!logoutArmed){ logoutArmed=true; el.textContent="Confirmar: cerrar sesión"; return; }
+  logoutArmed=false;
+  var done=function(){ user=null; S.habits=[]; S.profile={}; S.days={}; out={cfg:false,days:{}}; saveOut(); persistLocal(); S.ok="Sesión cerrada. Tus datos siguen en la nube."; render(); };
+  syncNow(false).then(function(){ return sb.auth.signOut(); }).then(done, done);
+}
+
 /* ---------- clicks ---------- */
 document.addEventListener("click", function(ev){
   var el = ev.target.closest("[data-a]"); if(!el) return;
   var a=el.dataset.a, h=el.dataset.id ? find(el.dataset.id) : null, k=S.sel, i;
   if(a!=="paste" && S.ok){ S.ok=""; }
+  if(a!=="logout") logoutArmed=false;
   if(a==="prev"){ S.sel=addDays(k,-1); render(); }
   else if(a==="next"){ if(k<today()){ S.sel=addDays(k,1); render(); } }
   else if(a==="pick"){ S.sel=el.dataset.k; render(); }
@@ -870,6 +1043,9 @@ document.addEventListener("click", function(ev){
     if(j>=0 && j<S.habits.length){ S.habits[i]=S.habits[j]; S.habits[j]=h; saveCfg(); render(); }
   }
   else if(a==="edit-profile"){ openProfile(); }
+  else if(a==="login"){ openLogin(); }
+  else if(a==="logout"){ logout(el); }
+  else if(a==="sync-now"){ syncNow(true); }
   else if(a==="del-photo"){ pendingPhoto=""; el.hidden=true; }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
   else if(a==="accent"){ setProfile({accent:el.dataset.v}); render(); }
@@ -888,7 +1064,7 @@ function start(){
   if(LOCAL){
     loadLocal();
     try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
-    route(); processParams(); return;
+    route(); processParams(); startSync(); return;
   }
   route();
   var slow = setTimeout(function(){
