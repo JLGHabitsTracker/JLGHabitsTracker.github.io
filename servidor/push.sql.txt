@@ -1,0 +1,39 @@
+create table if not exists public.push_subs (
+  endpoint text primary key,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  sub jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table public.push_subs enable row level security;
+create policy "mis suscripciones ver" on public.push_subs for select to authenticated using ((select auth.uid()) = user_id);
+create policy "mis suscripciones crear" on public.push_subs for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "mis suscripciones editar" on public.push_subs for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "mis suscripciones borrar" on public.push_subs for delete to authenticated using ((select auth.uid()) = user_id);
+grant select, insert, update, delete on public.push_subs to authenticated;
+create table if not exists public.push_private (
+  id int primary key,
+  vapid_public text,
+  vapid_private text,
+  cron_secret text not null default gen_random_uuid()::text
+);
+create table if not exists public.push_sent (
+  user_id uuid not null,
+  key text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, key)
+);
+alter table public.push_private enable row level security;
+alter table public.push_sent enable row level security;
+revoke all on public.push_private from anon, authenticated;
+revoke all on public.push_sent from anon, authenticated;
+grant all on public.push_private, public.push_sent, public.push_subs, public.user_config, public.day_logs to service_role;
+insert into public.push_private (id) values (1) on conflict do nothing;
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
+select cron.schedule('jlg-recordatorios', '*/5 * * * *', $$
+  select net.http_post(
+    url := 'https://sbabjzwmosdcvgzlzbiy.supabase.co/functions/v1/push',
+    headers := jsonb_build_object('Content-Type','application/json','x-cron-secret',(select cron_secret from public.push_private where id = 1)),
+    body := '{}'::jsonb
+  );
+$$);

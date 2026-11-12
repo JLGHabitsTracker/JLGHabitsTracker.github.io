@@ -161,6 +161,9 @@ legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
 .icopick input:checked + span{border-color:var(--accent);color:var(--accent)}
 .icopick input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
 .photo img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:18px;display:block}
+label.checkrow{flex-direction:row;align-items:center;gap:10px;font-size:15px;color:var(--ink)}
+input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var(--accent)}
+.tot li .chip{flex:none}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -274,6 +277,26 @@ legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
     </div>
   </form>
 </dialog>
+<dialog id="dlg-rem">
+  <form id="form-rem">
+    <h3>recordatorio</h3>
+    <label for="rm-time">Hora
+      <input id="rm-time" type="time" required>
+    </label>
+    <label for="rm-habit">Sobre qué
+      <select id="rm-habit"></select>
+    </label>
+    <label for="rm-pending" class="checkrow">
+      <input id="rm-pending" type="checkbox"> Avisar solo si aún no lo cumplo
+    </label>
+    <p class="err" id="rm-err" hidden></p>
+    <div class="actions">
+      <button type="button" class="danger" id="rm-del" data-a="rem-del" hidden>Eliminar</button>
+      <button type="button" class="ghost" data-a="close" data-d="dlg-rem">Cancelar</button>
+      <button type="submit" class="primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="dlg-login">
   <form id="form-login">
     <h3>tu cuenta</h3>
@@ -298,7 +321,7 @@ legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
 <script>
 (function(){
 "use strict";
-var VERSION = "1.5.2";
+var VERSION = "1.6";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -679,6 +702,7 @@ function viewPerfil(){
     else if(!user) h += '<p class="small">Crea tu cuenta o inicia sesión para tener tus datos en el iPhone, la compu y donde quieras, sin pasar respaldos.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div>';
     else h += '<p class="small">Sesión iniciada como <b>'+esc(user.email||"")+'</b>.</p><p class="small">'+esc(syncLabel())+'</p><div class="tools"><button class="ghost" data-a="sync-now">sincronizar ahora</button><button class="danger" data-a="logout">cerrar sesión</button></div>';
     h += '</div>';
+    if(sb && user) h += remindersCard();
   }
   h += '<div class="card"><h3>personalizar</h3><div class="setrow"><span>Color</span><div class="swatches">';
   Object.keys(ACCENTS).forEach(function(a){
@@ -1026,6 +1050,86 @@ function logout(el){
   syncNow(false).then(function(){ return sb.auth.signOut(); }).then(done, done);
 }
 
+/* ---------- reminders + push ---------- */
+S.pushOn = false; S.pushMsg = "";
+var remEditing = null, remDelArmed = false;
+function pushSupported(){ return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window; }
+function b64u(s){ var p="=".repeat((4-s.length%4)%4), b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/")), a=new Uint8Array(b.length); for(var i=0;i<b.length;i++) a[i]=b.charCodeAt(i); return a; }
+function myTz(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City"; }catch(e){ return "America/Mexico_City"; } }
+function initPush(){
+  if(!LOCAL || !pushSupported()) return;
+  navigator.serviceWorker.register("sw.js").then(function(){ return navigator.serviceWorker.ready; }).then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(s){
+    S.pushOn = !!s && Notification.permission==="granted";
+    if(S.view==="perfil" && !document.querySelector("dialog[open]")) render();
+  }).catch(function(){});
+}
+async function enablePush(){
+  try{
+    var perm = await Notification.requestPermission();
+    if(perm!=="granted"){ S.pushMsg="No diste permiso. Actívalo en Ajustes → Notificaciones → JLG Habits."; render(); return; }
+    S.pushMsg="Activando…"; render();
+    var reg = await navigator.serviceWorker.ready;
+    var r = await sb.functions.invoke("push", {method:"GET"});
+    if(r.error || !r.data || !r.data.publicKey) throw new Error("llave");
+    var sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u(r.data.publicKey)});
+    var j = sub.toJSON();
+    var up = await sb.from("push_subs").upsert({endpoint:j.endpoint, user_id:user.id, sub:j});
+    if(up.error) throw new Error("guardar");
+    S.pushOn = true; S.pushMsg = "Notificaciones activadas en este dispositivo.";
+    if((S.profile||{}).tz!==myTz()) setProfile({tz:myTz()});
+  }catch(e){ S.pushMsg = "No se pudieron activar las notificaciones ("+(e && e.message || "error")+"). Intenta de nuevo."; }
+  render();
+}
+function testPush(){
+  S.pushMsg="Enviando…"; render();
+  sb.functions.invoke("push", {body:{action:"test"}}).then(function(r){
+    var d=r.data||{};
+    S.pushMsg = r.error ? "No se pudo enviar la prueba." : d.sent ? "Enviada. Debe llegar en unos segundos; cierra la app para verla." : "No se envió"+(d.errors && d.errors.length ? " (error "+d.errors[0]+")" : ": este dispositivo no está registrado")+". Toca activar otra vez.";
+    if(!r.error && !d.sent) S.pushOn=false;
+    render();
+  }, function(){ S.pushMsg="Sin conexión."; render(); });
+}
+function remLabel(r){ if(!r.habit) return "Resumen del día"; var h=find(r.habit); return h ? h.name : "Hábito eliminado"; }
+function remindersCard(){
+  var rs=((S.profile||{}).reminders||[]).slice().sort(function(a,b){ return a.time<b.time?-1:1; });
+  var h='<div class="card"><h3>recordatorios</h3>';
+  if(!pushSupported()) h+='<p class="small">Aquí no se pueden recibir notificaciones. En el iPhone, abre la app desde el ícono de la pantalla de inicio (iOS 16.4 o más reciente).</p>';
+  else if(!S.pushOn) h+='<p class="small">Activa las notificaciones en este dispositivo para recibir tus recordatorios.</p><div class="tools"><button class="primary" data-a="push-on">activar notificaciones</button></div>';
+  else h+='<p class="small">Notificaciones activas en este dispositivo.</p><div class="tools"><button class="ghost" data-a="push-test">enviar una de prueba</button></div>';
+  if(S.pushMsg) h+='<p class="small" role="status">'+esc(S.pushMsg)+'</p>';
+  if(rs.length){
+    h+='<ul class="tot">';
+    rs.forEach(function(r){ h+='<li><span>'+esc(r.time)+' · '+esc(remLabel(r))+(r.pending!==false?' · si falta':'')+'</span><button class="chip" data-a="rem-edit" data-id="'+esc(r.id)+'">editar</button></li>'; });
+    h+='</ul>';
+  }
+  h+='<div class="tools"><button class="ghost" data-a="rem-new">nuevo recordatorio</button></div><p class="small">Llegan con hasta 5 minutos de margen.</p></div>';
+  return h;
+}
+function openRem(id){
+  var rs=(S.profile||{}).reminders||[], r=null;
+  rs.forEach(function(x){ if(x.id===id) r=x; });
+  remEditing = r ? r.id : null; remDelArmed=false;
+  var opts='<option value="">Resumen del día</option>';
+  S.habits.forEach(function(x){ opts+='<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'; });
+  $("rm-habit").innerHTML=opts;
+  $("rm-time").value = r ? r.time : "21:00";
+  $("rm-habit").value = r && r.habit ? r.habit : "";
+  $("rm-pending").checked = r ? r.pending!==false : true;
+  $("rm-del").hidden = !r; $("rm-del").textContent="Eliminar";
+  $("rm-err").hidden = true;
+  $("dlg-rem").showModal();
+}
+$("form-rem").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var t=$("rm-time").value;
+  if(!/^\d{2}:\d{2}$/.test(t)){ $("rm-err").textContent="Elige una hora."; $("rm-err").hidden=false; return; }
+  var rs=((S.profile||{}).reminders||[]).slice();
+  var item={id: remEditing || "r"+Date.now().toString(36), time:t, habit:$("rm-habit").value, pending:$("rm-pending").checked};
+  rs = rs.filter(function(x){ return x.id!==item.id; }); rs.push(item);
+  setProfile({reminders:rs, tz:myTz()}); $("dlg-rem").close(); render();
+});
+
 /* ---------- clicks ---------- */
 document.addEventListener("click", function(ev){
   var el = ev.target.closest("[data-a]"); if(!el) return;
@@ -1054,6 +1158,14 @@ document.addEventListener("click", function(ev){
   }
   else if(a==="edit-profile"){ openProfile(); }
   else if(a==="login"){ openLogin(); }
+  else if(a==="push-on"){ enablePush(); }
+  else if(a==="push-test"){ testPush(); }
+  else if(a==="rem-new"){ openRem(null); }
+  else if(a==="rem-edit"){ openRem(el.dataset.id); }
+  else if(a==="rem-del"){
+    if(!remDelArmed){ remDelArmed=true; el.textContent="Confirmar: eliminar"; return; }
+    setProfile({reminders:((S.profile||{}).reminders||[]).filter(function(x){ return x.id!==remEditing; })}); $("dlg-rem").close(); render();
+  }
   else if(a==="view-photo"){ $("ph-img").src=(S.profile||{}).photo||""; $("dlg-photo").showModal(); }
   else if(a==="photo-edit"){ $("dlg-photo").close(); openProfile(); }
   else if(a==="logout"){ logout(el); }
@@ -1087,7 +1199,7 @@ function start(){
   if(LOCAL){
     loadLocal();
     try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
-    route(); processParams(); startSync(); checkUpdate(); return;
+    route(); processParams(); startSync(); initPush(); checkUpdate(); return;
   }
   route();
   var slow = setTimeout(function(){
