@@ -346,6 +346,18 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
     </div>
   </form>
 </dialog>
+<dialog id="dlg-rest">
+  <form id="form-rest">
+    <h3>descanso de hoy</h3>
+    <p class="small">Marca solo lo que descansa hoy. Lo demás sigue contando normal y nada rompe tus rachas.</p>
+    <div id="rs-list" class="plist"></div>
+    <div class="actions">
+      <button type="button" class="ghost" data-a="rest-all">marcar todo</button>
+      <button type="button" class="ghost" data-a="close" data-d="dlg-rest">Cancelar</button>
+      <button type="submit" class="primary">Guardar</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="dlg-login">
   <form id="form-login">
     <h3>tu cuenta</h3>
@@ -370,7 +382,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.19";
+var VERSION = "1.20";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -439,8 +451,10 @@ function met(h,k){ return ratio(h,k)>=1; }
 function weekCount(h,k){ var m=monday(k), n=0; for(var i=0;i<7;i++) if(val(h,addDays(m,i))>=1) n++; return n; }
 function weekMet(h,mon){ return weekCount(h,mon) >= (h.goal||1); }
 function wdOf(k){ return (parse(k).getDay()+6)%7; }
-function isRest(k){ var r=(S.profile||{}).rest; return !!(r && r[k]); }
-function active(h,k){ if(isRest(k)) return false; if(isWeek(h) || !Array.isArray(h.days) || !h.days.length) return true; return h.days.indexOf(wdOf(k))>=0; }
+function restOf(k){ var r=(S.profile||{}).rest; return r ? r[k] : undefined; }
+function isRest(k){ return restOf(k)===true; }
+function restsHabit(h,k){ var r=restOf(k); return r===true || (Array.isArray(r) && r.indexOf(h.id)>=0); }
+function active(h,k){ if(restsHabit(h,k)) return false; if(isWeek(h) || !Array.isArray(h.days) || !h.days.length) return true; return h.days.indexOf(wdOf(k))>=0; }
 function metCount(k){ var n=0; S.habits.forEach(function(h){ if(met(h,k)) n++; }); return n; }
 function streak(h){
   var n=0, g=0;
@@ -668,7 +682,7 @@ function viewHoy(){
     + '<div class="row end"><h1>'+esc(d.toLocaleDateString("es-MX",{day:"numeric",month:"long"}))+'</h1><em class="state">'+state+'</em></div>'
     + '<div class="rule"></div>'
     + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div>'
-    + (S.habits.length ? '<div class="tools restrow"><button class="chip'+(rest?' on':'')+'" data-a="rest" aria-pressed="'+rest+'">'+(rest?'día de descanso · quitar':'marcar día de descanso')+'</button></div>' : '')
+    + (S.habits.length ? (function(){ var r=restOf(k), part=Array.isArray(r) && r.length; var lbl = rest ? 'descansa todo · editar' : part ? 'descansa: '+r.map(function(id){ var hh=find(id); return hh?hh.name:''; }).filter(Boolean).join(', ')+' · editar' : 'marcar descanso'; return '<div class="tools restrow"><button class="chip'+(rest||part?' on':'')+'" data-a="rest">'+esc(lbl)+'</button></div>'; })() : '')
     + ((S.profile||{}).quotes!==false ? '<p class="quote"><em>'+esc(quoteFor(k))+'</em></p>' : '')+'</header>';
   if(!S.cfgLoaded){ return h+'<p class="empty">Cargando tus hábitos…</p>'; }
   if(!S.habits.length){
@@ -683,7 +697,7 @@ function viewHoy(){
     if(x.type==="count") sub = fmt(v)+' / '+fmt(x.goal)+u;
     else if(isWeek(x)){ var wc=weekCount(x,k); cardMet=wc>=x.goal; sub = wc+' de '+x.goal+' esta semana'+(cardMet?' · cumplida':''); }
     else sub = ok?'hecho':'pendiente';
-    if(!act && !ok) sub = rest ? 'día de descanso' : 'hoy descansa · '+daysLabel(x);
+    if(!act && !ok) sub = restsHabit(x,k) ? 'descansa hoy' : 'hoy descansa · '+daysLabel(x);
     h += '<li class="card'+(cardMet?' met':'')+(!act && !ok?' off':'')+'"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div>';
     if(x.type==="count"){
       h += '<button class="orb'+(ok?' on':'')+'" data-a="inc" data-id="'+x.id+'" aria-label="Sumar '+fmt(x.step)+u+' a '+esc(x.name)+'">'+(ok?'✓':'+')+'</button></div>';
@@ -997,6 +1011,29 @@ $("form-profile").addEventListener("submit", function(ev){
     }
   }
   setProfile(patch); $("dlg-profile").close(); render();
+});
+
+/* ---------- rest of the day ---------- */
+var restDay = null;
+function openRest(k){
+  restDay=k;
+  var r=restOf(k), h="";
+  S.habits.forEach(function(x){
+    var dayOff = !isWeek(x) && Array.isArray(x.days) && x.days.length && x.days.indexOf(wdOf(k))<0;
+    var on = r===true || (Array.isArray(r) && r.indexOf(x.id)>=0);
+    h+='<label class="checkrow"><input type="checkbox" name="rs-h" value="'+esc(x.id)+'"'+(on?' checked':'')+(dayOff?' disabled':'')+'> '+esc(x.name)+(dayOff?' <span class="small">(hoy no le toca)</span>':'')+'</label>';
+  });
+  $("rs-list").innerHTML=h;
+  $("dlg-rest").showModal();
+}
+$("form-rest").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var ids=[], boxes=document.querySelectorAll('input[name="rs-h"]:not(:disabled)');
+  boxes.forEach(function(c){ if(c.checked) ids.push(c.value); });
+  var rr=Object.assign({}, (S.profile||{}).rest||{});
+  if(!ids.length) delete rr[restDay];
+  else rr[restDay] = ids.length===boxes.length ? true : ids;
+  setProfile({rest:rr}); $("dlg-rest").close(); render();
 });
 
 /* ---------- backup ---------- */
@@ -1458,7 +1495,8 @@ document.addEventListener("click", function(ev){
   else if(a==="quotes"){ setProfile({quotes:(S.profile||{}).quotes===false}); render(); }
   else if(a==="follow"){ socFollow(el.dataset.id, true); }
   else if(a==="unfollow"){ socFollow(el.dataset.id, false); }
-  else if(a==="rest"){ var rr=Object.assign({}, (S.profile||{}).rest||{}); if(rr[k]) delete rr[k]; else rr[k]=true; setProfile({rest:rr}); render(); }
+  else if(a==="rest"){ openRest(k); }
+  else if(a==="rest-all"){ document.querySelectorAll('input[name="rs-h"]:not(:disabled)').forEach(function(c){ c.checked=true; }); }
   else if(a==="go"){ location.hash = el.dataset.v; window.scrollTo(0,0); }
   else if(a==="set"){ var o={}, sv=el.dataset.v; o[el.dataset.k] = sv==="true" ? true : sv==="false" ? false : sv; setProfile(o); render(); }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }

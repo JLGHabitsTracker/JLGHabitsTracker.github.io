@@ -53,9 +53,9 @@ const mins = (t: string) => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); ret
 const fmt = (n: number) => Number(n).toLocaleString("es-MX", { maximumFractionDigits: 2 });
 
 type Habit = { id: string; name: string; type: string; goal?: number; unit?: string; days?: number[] };
-function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: Record<string, Record<string, number>>, today: string, quote = "", restDay = false) {
+function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: Record<string, Record<string, number>>, today: string, quote = "", restDay: unknown = false) {
   const wd = (new Date(today + "T00:00:00Z").getUTCDay() + 6) % 7;
-  const act = (h: Habit) => !restDay && (h.type === "week" || !Array.isArray(h.days) || !h.days.length || h.days.includes(wd));
+  const act = (h: Habit) => !(restDay === true || (Array.isArray(restDay) && restDay.includes(h.id))) && (h.type === "week" || !Array.isArray(h.days) || !h.days.length || h.days.includes(wd));
   if (r.habit === "__frase") return quote ? { title: "Frase del día", body: quote, tag: "frase" } : null;
   const v = (h: Habit, k: string) => Number(logs[k]?.[h.id]) || 0;
   const weekCount = (h: Habit) => Object.keys(logs).filter((k) => v(h, k) >= 1).length;
@@ -80,7 +80,7 @@ function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: 
 }
 
 // deno-lint-ignore no-explicit-any
-function weekly(habits: any[], logs: Record<string, Record<string, number>>, monday: string, today: string, rest: Record<string, boolean>) {
+function weekly(habits: any[], logs: Record<string, Record<string, number>>, monday: string, today: string, rest: Record<string, unknown>) {
   const days: string[] = [];
   for (let t = new Date(monday + "T00:00:00Z").getTime(); new Date(t).toISOString().slice(0, 10) <= today; t += 864e5) days.push(new Date(t).toISOString().slice(0, 10));
   // deno-lint-ignore no-explicit-any
@@ -89,7 +89,7 @@ function weekly(habits: any[], logs: Record<string, Record<string, number>>, mon
   const done = (h: any, k: string) => h.type === "count" ? v(h, k) > 0 && v(h, k) >= (h.goal || 0) : v(h, k) >= 1;
   const rows = habits.map((h) => {
     if (h.type === "week") { const n = days.filter((k) => v(h, k) >= 1).length; return { n: h.name, ok: Math.min(n, h.goal || 1), of: h.goal || 1 }; }
-    const act = days.filter((k) => !rest?.[k] && (!Array.isArray(h.days) || !h.days.length || h.days.includes((new Date(k + "T00:00:00Z").getUTCDay() + 6) % 7)));
+    const act = days.filter((k) => !(rest?.[k] === true || (Array.isArray(rest?.[k]) && (rest[k] as string[]).includes(h.id))) && (!Array.isArray(h.days) || !h.days.length || h.days.includes((new Date(k + "T00:00:00Z").getUTCDay() + 6) % 7)));
     return { n: h.name, ok: act.filter((k) => done(h, k)).length, of: act.length };
   }).filter((r) => r.of > 0);
   if (!rows.length) return null;
@@ -125,7 +125,7 @@ async function run() {
     for (const r of due) {
       const ins = await admin.from("push_sent").insert({ user_id: c.user_id, key: `${now.day}|${r.id}` });
       if (ins.error) continue;
-      const msg = r.habit === "__semana" ? weekly(Array.isArray(c.habits) ? c.habits : [], logs, now.monday, now.day, c.profile?.rest || {}) : build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes), !!c.profile?.rest?.[now.day]);
+      const msg = r.habit === "__semana" ? weekly(Array.isArray(c.habits) ? c.habits : [], logs, now.monday, now.day, c.profile?.rest || {}) : build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes), c.profile?.rest?.[now.day] || false);
       if (!msg) continue;
       if (r.habit === "__frase" && c.profile?.quoteLang === "en") msg.title = "Quote of the day";
       await sendTo(c.user_id, msg);
