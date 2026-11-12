@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <title>JLG HABITS JOURNAL</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:ital,wght@0,500;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:ital,wght@0,500;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,500;0,700;1,400&family=Bebas+Neue&family=Oswald:wght@500;700&family=Archivo:ital,wght@0,500;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <style>
 /* Layout: one phone-width column on warm black; serif date on top, one card per habit with icon, week dots and tally marks; tab bar pinned below. Single dark theme by choice; accent swappable from the profile. */
 :root{
@@ -322,7 +322,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.11";
+var VERSION = "1.12";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -506,7 +506,11 @@ var FONTS = {
   serif:{label:"serif", css:'"Fraunces",Georgia,"Times New Roman",serif'},
   sans:{label:"moderna", css:'"Instrument Sans",system-ui,-apple-system,sans-serif'},
   cond:{label:"condensada", css:'"Barlow Condensed","Arial Narrow",Arial,sans-serif'},
-  mono:{label:"máquina", css:'"IBM Plex Mono",ui-monospace,Menlo,monospace'}
+  mono:{label:"máquina", css:'"IBM Plex Mono",ui-monospace,Menlo,monospace'},
+  bebas:{label:"atlética", css:'"Bebas Neue","Arial Narrow",Arial,sans-serif'},
+  oswald:{label:"fuerte", css:'"Oswald","Arial Narrow",Arial,sans-serif'},
+  archivo:{label:"grotesca", css:'"Archivo",system-ui,-apple-system,sans-serif'},
+  dmserif:{label:"editorial", css:'"DM Serif Display",Georgia,serif'}
 };
 var ACCENTS = {
   dorado:{label:"dorado", a:"#d9b97c", d:"#7b6843"},
@@ -533,8 +537,8 @@ function applyLook(){
   r.setProperty("--dim", ac.d);
 }
 
-var QUOTES = ["La disciplina es hacerlo también el día que no tienes ganas.", "Nadie ve las repeticiones de hoy; todos verán el resultado.", "No necesitas un día perfecto, necesitas no faltar.", "El trabajo duro no hace ruido. Los resultados sí.", "El obstáculo en el camino se convierte en el camino. — Marco Aurelio", "Hazlo cansado, hazlo lento, pero hazlo.", "Cada raya de hoy es una deuda menos con tu yo de mañana.", "La motivación te arranca; el hábito te lleva.", "Lo que repites a diario pesa más que lo que haces de vez en cuando.", "No pierdas más tiempo discutiendo cómo debe ser un buen hombre. Sé uno. — Marco Aurelio", "No compitas con nadie: gánale a tu versión de ayer.", "Un uno por ciento diario no se nota hoy. En un año no te reconoces.", "El esfuerzo que nadie aplaude es el que más construye.", "Empieza antes de sentirte listo.", "No es que tengamos poco tiempo, sino que perdemos mucho. — Séneca", "La constancia aburre a los que se rinden.", "Hoy también cuenta, sobre todo si es un día difícil.", "Tu futuro se arma con lo que haces cuando nadie te obliga.", "Menos planes, más repeticiones.", "Sufrimos más en la imaginación que en la realidad. — Séneca", "El cansancio pasa. El orgullo de haber cumplido se queda.", "No rompas la racha: mañana te lo vas a agradecer.", "Lo difícil de hoy es lo normal de mañana.", "Cumple primero contigo; lo demás llega después.", "Mientras se aplaza, la vida pasa. — Séneca", "El talento abre la puerta; el trabajo te mantiene adentro.", "Si fuera fácil, cualquiera tendría tus resultados.", "Pequeño y diario le gana a grande y a veces.", "No esperes ganas: crea la costumbre.", "Lo que hay que aprender a hacer, lo aprendemos haciéndolo. — Aristóteles", "Cada día cumplido es una prueba de quién estás siendo.", "Trabaja en silencio y deja que la racha hable.", "Lo que hoy cuesta, mañana se llama carácter.", "Termina lo que empezaste, aunque sea con el mínimo.", "No son las cosas las que nos perturban, sino la opinión que tenemos de ellas. — Epicteto", "La meta no es hoy, pero hoy es el camino.", "Descansa si hace falta; rendirte no está en la lista."];
-var QUOTES_EN = ["Discipline is doing it on the days you don't feel like it.", "Nobody sees today's reps. Everyone will see the result.", "You don't need a perfect day. You need to not miss.", "Hard work makes no noise. Results do.", "What stands in the way becomes the way. — Marcus Aurelius", "Do it tired, do it slow, but do it.", "Every tally mark today is one less debt to tomorrow's you.", "Motivation gets you started. Habit carries you.", "What you repeat daily outweighs what you do once in a while.", "Waste no more time arguing what a good man should be. Be one. — Marcus Aurelius", "Compete with no one: beat yesterday's version of you.", "One percent a day is invisible today. In a year you won't recognize yourself.", "The effort nobody applauds builds the most.", "Start before you feel ready.", "It is not that we have a short time to live, but that we waste much of it. — Seneca", "Consistency bores the ones who quit.", "Today counts too, especially if it's a hard day.", "Your future is built by what you do when nobody makes you.", "Fewer plans, more reps.", "We suffer more often in imagination than in reality. — Seneca", "The tiredness fades. The pride of showing up stays.", "Don't break the streak: tomorrow you'll be grateful.", "Today's hard is tomorrow's normal.", "Keep your word to yourself first; the rest follows.", "While we are postponing, life speeds by. — Seneca", "Talent opens the door. Work keeps you in the room.", "If it were easy, everyone would have your results.", "Small and daily beats big and sometimes.", "Don't wait to feel like it: build the routine.", "The things we have to learn before we can do them, we learn by doing them. — Aristotle", "Every day you show up is proof of who you're becoming.", "Work in silence and let the streak speak.", "What costs you today is called character tomorrow.", "Finish what you started, even at the minimum.", "It is not things that disturb us, but our judgments about them. — Epictetus", "The goal isn't today, but today is the road.", "Rest if you need to. Quitting isn't on the list."];
+var QUOTES = ["La disciplina es hacerlo también el día que no tienes ganas.", "Nadie ve las repeticiones de hoy; todos verán el resultado.", "La negación es la zona de confort definitiva. — David Goggins", "No necesitas un día perfecto, necesitas no faltar.", "El trabajo duro no hace ruido. Los resultados sí.", "El obstáculo en el camino se convierte en el camino. — Marco Aurelio", "Hazlo cansado, hazlo lento, pero hazlo.", "Cada raya de hoy es una deuda menos con tu yo de mañana.", "Disciplina es igual a libertad. — Jocko Willink", "La motivación te arranca; el hábito te lleva.", "Lo que repites a diario pesa más que lo que haces de vez en cuando.", "No pierdas más tiempo discutiendo cómo debe ser un buen hombre. Sé uno. — Marco Aurelio", "No compitas con nadie: gánale a tu versión de ayer.", "Un uno por ciento diario no se nota hoy. En un año no te reconoces.", "Avanza hacia los retos que te endurezcan y te mejoren. — Robert Greene", "El esfuerzo que nadie aplaude es el que más construye.", "Empieza antes de sentirte listo.", "No es que tengamos poco tiempo, sino que perdemos mucho. — Séneca", "La constancia aburre a los que se rinden.", "Hoy también cuenta, sobre todo si es un día difícil.", "Ganar no sucede el día de la competencia. — Chris Bumstead", "Tu futuro se arma con lo que haces cuando nadie te obliga.", "Menos planes, más repeticiones.", "Sufrimos más en la imaginación que en la realidad. — Séneca", "El cansancio pasa. El orgullo de haber cumplido se queda.", "No rompas la racha: mañana te lo vas a agradecer.", "Las conversaciones más importantes que tendrás son las que tienes contigo mismo. — David Goggins", "Lo difícil de hoy es lo normal de mañana.", "Cumple primero contigo; lo demás llega después.", "Mientras se aplaza, la vida pasa. — Séneca", "El talento abre la puerta; el trabajo te mantiene adentro.", "Si fuera fácil, cualquiera tendría tus resultados.", "No cuentes con la motivación. Cuenta con la disciplina. — Jocko Willink", "Pequeño y diario le gana a grande y a veces.", "No esperes ganas: crea la costumbre.", "Lo que hay que aprender a hacer, lo aprendemos haciéndolo. — Aristóteles", "Cada día cumplido es una prueba de quién estás siendo.", "Trabaja en silencio y deja que la racha hable.", "Si adormeces lo malo, adormeces lo bueno. — Chris Bumstead", "Lo que hoy cuesta, mañana se llama carácter.", "Termina lo que empezaste, aunque sea con el mínimo.", "No son las cosas las que nos perturban, sino la opinión que tenemos de ellas. — Epicteto", "La meta no es hoy, pero hoy es el camino.", "Descansa si hace falta; rendirte no está en la lista."];
+var QUOTES_EN = ["Discipline is doing it on the days you don't feel like it.", "Nobody sees today's reps. Everyone will see the result.", "Denial is the ultimate comfort zone. — David Goggins", "You don't need a perfect day. You need to not miss.", "Hard work makes no noise. Results do.", "What stands in the way becomes the way. — Marcus Aurelius", "Do it tired, do it slow, but do it.", "Every tally mark today is one less debt to tomorrow's you.", "Discipline equals freedom. — Jocko Willink", "Motivation gets you started. Habit carries you.", "What you repeat daily outweighs what you do once in a while.", "Waste no more time arguing what a good man should be. Be one. — Marcus Aurelius", "Compete with no one: beat yesterday's version of you.", "One percent a day is invisible today. In a year you won't recognize yourself.", "Move toward challenges that will toughen and improve you. — Robert Greene", "The effort nobody applauds builds the most.", "Start before you feel ready.", "It is not that we have a short time to live, but that we waste much of it. — Seneca", "Consistency bores the ones who quit.", "Today counts too, especially if it's a hard day.", "Winning doesn't happen on show day. — Chris Bumstead", "Your future is built by what you do when nobody makes you.", "Fewer plans, more reps.", "We suffer more often in imagination than in reality. — Seneca", "The tiredness fades. The pride of showing up stays.", "Don't break the streak: tomorrow you'll be grateful.", "The most important conversations you'll ever have are the ones you'll have with yourself. — David Goggins", "Today's hard is tomorrow's normal.", "Keep your word to yourself first; the rest follows.", "While we are postponing, life speeds by. — Seneca", "Talent opens the door. Work keeps you in the room.", "If it were easy, everyone would have your results.", "Don't count on motivation. Count on discipline. — Jocko Willink", "Small and daily beats big and sometimes.", "Don't wait to feel like it: build the routine.", "The things we have to learn before we can do them, we learn by doing them. — Aristotle", "Every day you show up is proof of who you're becoming.", "Work in silence and let the streak speak.", "If you numb the bad, you numb the good. — Chris Bumstead", "What costs you today is called character tomorrow.", "Finish what you started, even at the minimum.", "It is not things that disturb us, but our judgments about them. — Epictetus", "The goal isn't today, but today is the road.", "Rest if you need to. Quitting isn't on the list."];
 function quoteFor(k){ var d=parse(k); return ((S.profile||{}).quoteLang==="en" ? QUOTES_EN : QUOTES)[Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5) % QUOTES.length]; }
 /* ---------- views ---------- */
 var WD = ["l","m","m","j","v","s","d"];
@@ -688,7 +692,7 @@ function viewPerfil(){
     + '<div class="hname"><h2>'+esc(name||"tu perfil")+'</h2><div class="meta">'
     + '<span>'+(user && user.email ? 'Correo registrado: '+esc(user.email) : pf.email ? esc(pf.email) : 'Sin correo registrado')+'</span>'
     + '<span>'+(since ? 'En la bitácora desde el '+esc(longDate(since)) : 'Aún sin registros')+'</span></div></div></div>'
-    + '<button class="ghost" data-a="edit-profile">editar perfil</button>';
+    + '<button class="ghost" data-a="go" data-v="ajustes">editar perfil</button>';
   h += '<div class="stats two">'
     + '<div class="stat"><span class="num">'+s.cur+'</span><small>días de constancia actual</small></div>'
     + '<div class="stat"><span class="num">'+s.best+'</span><small>mejor constancia</small></div>'
@@ -710,15 +714,7 @@ function viewPerfil(){
     });
     h += '</ul></div>';
   }
-  if(LOCAL){
-    h += '<div class="card"><h3>cuenta</h3>';
-    if(!sb) h += '<p class="small">No se pudo conectar con la nube. Revisa tu internet y vuelve a abrir la app.</p>';
-    else if(!user) h += '<p class="small">Crea tu cuenta o inicia sesión para tener tus datos en el iPhone, la compu y donde quieras, sin pasar respaldos.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div>';
-    else h += '<p class="small">Sesión iniciada como <b>'+esc(user.email||"")+'</b>.</p><p class="small">'+esc(syncLabel())+'</p><div class="tools"><button class="ghost" data-a="sync-now">sincronizar ahora</button><button class="danger" data-a="logout">cerrar sesión</button></div>';
-    h += '</div>';
-    if(sb && user) h += remindersCard();
-  }
-  h += '<div class="card"><div class="row"><div class="hname"><h3>personalizar</h3><em class="sub">color, fondo, tipografía y más</em></div><button class="ghost" data-a="go" data-v="personalizar">abrir</button></div></div>';
+  if(LOCAL && sb && user) h += remindersCard();
   h += '<div class="card"><h3>respaldo</h3><p class="small">'+(!LOCAL ? 'Tus datos se guardan en tu cuenta de Claude.' : user ? 'Tus datos se guardan en este dispositivo y en la nube. El respaldo es opcional.' : 'Tus datos se guardan solo en este dispositivo.')+'</p>'
     + '<div class="tools">'+(LOCAL?'<button class="ghost" data-a="share-backup">guardar en archivos</button>':'')+'<button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
     + (LOCAL ? '<p class="small">'+(pf.lastBackup ? 'Último respaldo: '+esc(longDate(pf.lastBackup,{day:"numeric",month:"long"})) : 'Todavía no hay respaldos.')+' Te aviso cada 7 días.</p>' : '')
@@ -729,7 +725,7 @@ function viewPerfil(){
 function opt(key, val, label, cur){ return '<button class="chip'+(cur===val?' on':'')+'" data-a="set" data-k="'+key+'" data-v="'+val+'" aria-pressed="'+(cur===val)+'">'+label+'</button>'; }
 function viewPers(){
   var pf=S.profile||{};
-  var h = notes()+'<div><button class="chip" data-a="go" data-v="perfil">‹ perfil</button></div><div><p class="eyebrow">a tu gusto</p><h1>personalizar</h1></div>';
+  var h = notes()+'<div><button class="chip" data-a="go" data-v="ajustes">‹ editar perfil</button></div><div><p class="eyebrow">a tu gusto</p><h1>personalizar</h1></div>';
   h += '<div class="card"><h3>apariencia</h3><div class="setrow"><span>Color</span><div class="swatches">';
   Object.keys(ACCENTS).forEach(function(a){
     h += '<button class="sw'+(accentKey()===a?' on':'')+'" data-a="accent" data-v="'+a+'" aria-label="Color '+ACCENTS[a].label+'" aria-pressed="'+(accentKey()===a)+'"><span style="background:'+ACCENTS[a].a+'"></span></button>';
@@ -746,14 +742,27 @@ function viewPers(){
     + '<div class="setrow"><span>Rachas en las tarjetas</span><div class="tools">'+opt("tally","true","rayitas y número",String(pf.tally!==false))+opt("tally","false","solo número",String(pf.tally!==false))+'</div></div></div>';
   return h;
 }
+function viewAjustes(){
+  var h = notes()+'<div><button class="chip" data-a="go" data-v="perfil">‹ perfil</button></div><div><p class="eyebrow">tu cuenta y tu app</p><h1>editar perfil</h1></div>';
+  h += '<div class="card"><div class="row"><div class="hname"><h3>datos</h3><em class="sub">nombre, correo y foto</em></div><button class="ghost" data-a="edit-profile">editar</button></div></div>';
+  if(LOCAL){
+    h += '<div class="card"><h3>cuenta</h3>';
+    if(!sb) h += '<p class="small">No se pudo conectar con la nube. Revisa tu internet y vuelve a abrir la app.</p>';
+    else if(!user) h += '<p class="small">Crea tu cuenta o inicia sesión para tener tus datos en el iPhone, la compu y donde quieras, sin pasar respaldos.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div>';
+    else h += '<p class="small">Sesión iniciada como <b>'+esc(user.email||"")+'</b>.</p><p class="small">'+esc(syncLabel())+'</p><div class="tools"><button class="ghost" data-a="sync-now">sincronizar ahora</button><button class="danger" data-a="logout">cerrar sesión</button></div>';
+    h += '</div>';
+  }
+  h += '<div class="card"><div class="row"><div class="hname"><h3>personalizar</h3><em class="sub">color, fondo, tipografía y más</em></div><button class="ghost" data-a="go" data-v="personalizar">abrir</button></div></div>';
+  return h;
+}
 function render(){
   applyLook();
-  app.innerHTML = S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : viewHoy();
-  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && S.view==="personalizar")); });
+  app.innerHTML = S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : viewHoy();
+  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes"))); });
 }
 function route(){
   var v = location.hash.replace("#","");
-  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar") ? v : "hoy";
+  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes") ? v : "hoy";
   render();
 }
 window.addEventListener("hashchange", route);
