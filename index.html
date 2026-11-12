@@ -199,6 +199,18 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .pill svg{width:14px;height:14px}
 .pill.on{background:var(--accent);color:var(--accent-ink)}
 .pill.off{opacity:.5}
+.wkgrid{gap:10px}
+.wkrow{display:grid;grid-template-columns:1fr repeat(7,22px);gap:8px;align-items:center}
+.wkhead b{font-family:var(--display);font-size:18px;text-transform:lowercase}
+.wkhead span{text-align:center;font-size:12px;color:var(--muted);font-weight:600;border-radius:6px;line-height:20px}
+.wkhead span.tod{color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wkname{display:flex;align-items:center;gap:8px;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wkname svg{width:16px;height:16px;flex:none;color:var(--accent)}
+.wkrow i{width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--dim);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700;justify-self:center}
+.wkrow i.ok{background:var(--accent);box-shadow:none;color:var(--accent-ink)}
+.wkrow i.half{background:linear-gradient(90deg,var(--dim) 50%,transparent 50%)}
+.wkrow i.fut{box-shadow:inset 0 0 0 1px var(--line)}
+.wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -382,7 +394,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.20";
+var VERSION = "1.21";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -724,7 +736,17 @@ function viewHoy(){
 function viewHist(){
   var h = notes()+'<div><p class="eyebrow">últimas 12 semanas</p><h1>historial</h1></div>';
   if(!S.habits.length) return h+'<p class="empty">Cuando registres hábitos, aquí verás tus rachas y tu constancia.</p>';
-  var t=today(), start=addDays(monday(t),-77);
+  var t=today(), start=addDays(monday(t),-77), mon=monday(t);
+  var m0=parse(mon).toLocaleDateString("es-MX",{month:"short"}).replace(".",""), m6=parse(addDays(mon,6)).toLocaleDateString("es-MX",{month:"short"}).replace(".","");
+  h += '<div class="card wkgrid"><div class="wkrow wkhead"><b>'+parse(mon).getDate()+(m0!==m6?' '+esc(m0):'')+'–'+parse(addDays(mon,6)).getDate()+' '+esc(m6)+'</b>';
+  for(var j=0;j<7;j++){ var dj=addDays(mon,j); h+='<span class="'+(dj===t?'tod':'')+'">'+WD[j]+'</span>'; }
+  h += '</div>';
+  S.habits.forEach(function(x){
+    h += '<div class="wkrow"><span class="wkname">'+svg(iconOf(x))+esc(x.name)+'</span>';
+    for(var j=0;j<7;j++){ var dj=addDays(mon,j), cls = met(x,dj) ? 'ok' : (!active(x,dj) ? 'off' : dj>t ? 'fut' : ratio(x,dj)>0 ? 'half' : ''); h+='<i class="'+cls+'" title="'+dj+'">'+(cls==='ok'?'✓':'')+'</i>'; }
+    h += '</div>';
+  });
+  h += '</div>';
   h += '<p class="legend"><span><i style="background:var(--accent)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span><span><i style="box-shadow:inset 0 0 0 1px var(--line)"></i>Descanso</span></p><ul class="list">';
   S.habits.forEach(function(x){
     var c=consistency(x), wk=isWeek(x);
