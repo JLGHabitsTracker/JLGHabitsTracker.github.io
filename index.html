@@ -164,6 +164,7 @@ legend{font-size:13px;color:var(--muted);padding:0;margin-bottom:6px}
 label.checkrow{flex-direction:row;align-items:center;gap:10px;font-size:15px;color:var(--ink)}
 input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var(--accent)}
 .tot li .chip{flex:none}
+.quote{margin:4px 0 0;padding-left:14px;border-left:2px solid var(--dim);color:var(--ink);font-size:19px;line-height:1.3;text-wrap:balance}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -321,7 +322,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.6";
+var VERSION = "1.7";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -523,6 +524,8 @@ function applyLook(){
   r.setProperty("--dim", ac.d);
 }
 
+var QUOTES = ["La disciplina es hacerlo también el día que no tienes ganas.", "Nadie ve las repeticiones de hoy; todos verán el resultado.", "No necesitas un día perfecto, necesitas no faltar.", "El trabajo duro no hace ruido. Los resultados sí.", "Hazlo cansado, hazlo lento, pero hazlo.", "Cada raya de hoy es una deuda menos con tu yo de mañana.", "La motivación te arranca; el hábito te lleva.", "Lo que repites a diario pesa más que lo que haces de vez en cuando.", "No compitas con nadie: gánale a tu versión de ayer.", "Un uno por ciento diario no se nota hoy. En un año no te reconoces.", "El esfuerzo que nadie aplaude es el que más construye.", "Empieza antes de sentirte listo.", "La constancia aburre a los que se rinden.", "Hoy también cuenta, sobre todo si es un día difícil.", "Tu futuro se arma con lo que haces cuando nadie te obliga.", "Menos planes, más repeticiones.", "El cansancio pasa. El orgullo de haber cumplido se queda.", "No rompas la racha: mañana te lo vas a agradecer.", "Lo difícil de hoy es lo normal de mañana.", "Cumple primero contigo; lo demás llega después.", "El talento abre la puerta; el trabajo te mantiene adentro.", "Si fuera fácil, cualquiera tendría tus resultados.", "Pequeño y diario le gana a grande y a veces.", "No esperes ganas: crea la costumbre.", "Cada día cumplido es una prueba de quién estás siendo.", "Trabaja en silencio y deja que la racha hable.", "Lo que hoy cuesta, mañana se llama carácter.", "Termina lo que empezaste, aunque sea con el mínimo.", "La meta no es hoy, pero hoy es el camino.", "Descansa si hace falta; rendirte no está en la lista."];
+function quoteFor(k){ var d=parse(k); return QUOTES[Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5) % QUOTES.length]; }
 /* ---------- views ---------- */
 var WD = ["l","m","m","j","v","s","d"];
 function tally(n){
@@ -567,7 +570,8 @@ function viewHoy(){
     + '<em class="const">'+(ds>0 ? 'constancia · '+ds+(ds===1?' día':' días') : 'empieza hoy')+'</em></div>'
     + '<div class="row end"><h1>'+esc(d.toLocaleDateString("es-MX",{day:"numeric",month:"long"}))+'</h1><em class="state">'+state+'</em></div>'
     + '<div class="rule"></div>'
-    + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div></header>';
+    + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div>'
+    + ((S.profile||{}).quotes!==false ? '<p class="quote"><em>'+esc(quoteFor(k))+'</em></p>' : '')+'</header>';
   if(!S.cfgLoaded){ return h+'<p class="empty">Cargando tus hábitos…</p>'; }
   if(!S.habits.length){
     return h+'<div class="card"><p class="empty">Todavía no hay hábitos en tu bitácora.</p><button class="primary" data-a="new-habit">Crear el primer hábito</button>'+(sb && !user ? '<button class="ghost" data-a="login">Ya tengo cuenta: iniciar sesión</button>' : '')+'</div>';
@@ -712,7 +716,7 @@ function viewPerfil(){
   Object.keys(FONTS).forEach(function(f){
     h += '<button class="chip'+(fontKey()===f?' on':'')+'" data-a="font" data-v="'+f+'" aria-pressed="'+(fontKey()===f)+'" style="font-family:'+esc(FONTS[f].css)+'">'+FONTS[f].label+'</button>';
   });
-  h += '</div></div></div>';
+  h += '</div></div><div class="setrow"><span>Frase del día</span><div class="tools"><button class="chip'+((S.profile||{}).quotes!==false?' on':'')+'" data-a="quotes" aria-pressed="'+((S.profile||{}).quotes!==false)+'">'+((S.profile||{}).quotes!==false?'visible':'oculta')+'</button></div></div></div>';
   h += '<div class="card"><h3>respaldo</h3><p class="small">'+(!LOCAL ? 'Tus datos se guardan en tu cuenta de Claude.' : user ? 'Tus datos se guardan en este dispositivo y en la nube. El respaldo es opcional.' : 'Tus datos se guardan solo en este dispositivo.')+'</p>'
     + '<div class="tools">'+(LOCAL?'<button class="ghost" data-a="share-backup">guardar en archivos</button>':'')+'<button class="ghost" data-a="copy-backup">copiar respaldo</button><button class="ghost" data-a="open-restore">restaurar</button></div>'
     + (LOCAL ? '<p class="small">'+(pf.lastBackup ? 'Último respaldo: '+esc(longDate(pf.lastBackup,{day:"numeric",month:"long"})) : 'Todavía no hay respaldos.')+' Te aviso cada 7 días.</p>' : '')
@@ -1171,6 +1175,7 @@ document.addEventListener("click", function(ev){
   else if(a==="logout"){ logout(el); }
   else if(a==="sync-now"){ syncNow(true); }
   else if(a==="del-photo"){ pendingPhoto=""; el.hidden=true; }
+  else if(a==="quotes"){ setProfile({quotes:(S.profile||{}).quotes===false}); render(); }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
   else if(a==="accent"){ setProfile({accent:el.dataset.v}); render(); }
   else if(a==="snooze-backup"){ setProfile({backupSnooze:today()}); render(); }
