@@ -53,7 +53,8 @@ const mins = (t: string) => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); ret
 const fmt = (n: number) => Number(n).toLocaleString("es-MX", { maximumFractionDigits: 2 });
 
 type Habit = { id: string; name: string; type: string; goal?: number; unit?: string };
-function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: Record<string, Record<string, number>>, today: string) {
+function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: Record<string, Record<string, number>>, today: string, quote = "") {
+  if (r.habit === "__frase") return quote ? { title: "Frase del día", body: quote, tag: "frase" } : null;
   const v = (h: Habit, k: string) => Number(logs[k]?.[h.id]) || 0;
   const weekCount = (h: Habit) => Object.keys(logs).filter((k) => v(h, k) >= 1).length;
   const done = (h: Habit) => h.type === "count" ? v(h, today) >= (h.goal || 0) && v(h, today) > 0
@@ -78,6 +79,9 @@ async function run() {
   const { data: cfgs, error } = await admin.from("user_config").select("user_id,habits,profile");
   if (error) throw error;
   let fired = 0;
+  let quotes: string[] = [];
+  try { quotes = await (await fetch("https://jlghabitstracker.github.io/frases.json")).json(); } catch { quotes = []; }
+  if (!Array.isArray(quotes) || !quotes.length) quotes = ["La disciplina es hacerlo también el día que no tienes ganas."];
   for (const c of cfgs ?? []) {
     const rems = c.profile?.reminders;
     if (!Array.isArray(rems) || !rems.length) continue;
@@ -91,7 +95,7 @@ async function run() {
     for (const r of due) {
       const ins = await admin.from("push_sent").insert({ user_id: c.user_id, key: `${now.day}|${r.id}` });
       if (ins.error) continue;
-      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day);
+      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, quotes[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % quotes.length]);
       if (!msg) continue;
       await sendTo(c.user_id, msg);
       fired++;

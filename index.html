@@ -322,7 +322,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.7";
+var VERSION = "1.8";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -1094,7 +1094,7 @@ function testPush(){
     render();
   }, function(){ S.pushMsg="Sin conexión."; render(); });
 }
-function remLabel(r){ if(!r.habit) return "Resumen del día"; var h=find(r.habit); return h ? h.name : "Hábito eliminado"; }
+function remLabel(r){ if(r.habit==="__frase") return "Frase del día"; if(!r.habit) return "Resumen del día"; var h=find(r.habit); return h ? h.name : "Hábito eliminado"; }
 function remindersCard(){
   var rs=((S.profile||{}).reminders||[]).slice().sort(function(a,b){ return a.time<b.time?-1:1; });
   var h='<div class="card"><h3>recordatorios</h3>';
@@ -1104,7 +1104,7 @@ function remindersCard(){
   if(S.pushMsg) h+='<p class="small" role="status">'+esc(S.pushMsg)+'</p>';
   if(rs.length){
     h+='<ul class="tot">';
-    rs.forEach(function(r){ h+='<li><span>'+esc(r.time)+' · '+esc(remLabel(r))+(r.pending!==false?' · si falta':'')+'</span><button class="chip" data-a="rem-edit" data-id="'+esc(r.id)+'">editar</button></li>'; });
+    rs.forEach(function(r){ h+='<li><span>'+esc(r.time)+' · '+esc(remLabel(r))+(r.pending!==false && r.habit!=="__frase"?' · si falta':'')+'</span><button class="chip" data-a="rem-edit" data-id="'+esc(r.id)+'">editar</button></li>'; });
     h+='</ul>';
   }
   h+='<div class="tools"><button class="ghost" data-a="rem-new">nuevo recordatorio</button></div><p class="small">Llegan con hasta 5 minutos de margen.</p></div>';
@@ -1114,7 +1114,7 @@ function openRem(id){
   var rs=(S.profile||{}).reminders||[], r=null;
   rs.forEach(function(x){ if(x.id===id) r=x; });
   remEditing = r ? r.id : null; remDelArmed=false;
-  var opts='<option value="">Resumen del día</option>';
+  var opts='<option value="">Resumen del día</option><option value="__frase">Frase del día</option>';
   S.habits.forEach(function(x){ opts+='<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'; });
   $("rm-habit").innerHTML=opts;
   $("rm-time").value = r ? r.time : "21:00";
