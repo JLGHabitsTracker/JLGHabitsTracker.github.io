@@ -82,6 +82,9 @@ async function run() {
   let quotes: string[] = [];
   try { quotes = await (await fetch("https://jlghabitstracker.github.io/frases.json")).json(); } catch { quotes = []; }
   if (!Array.isArray(quotes) || !quotes.length) quotes = ["La disciplina es hacerlo también el día que no tienes ganas."];
+  let quotesEn: string[] = [];
+  try { quotesEn = await (await fetch("https://jlghabitstracker.github.io/frases-en.json")).json(); } catch { quotesEn = []; }
+  if (!Array.isArray(quotesEn) || !quotesEn.length) quotesEn = quotes;
   for (const c of cfgs ?? []) {
     const rems = c.profile?.reminders;
     if (!Array.isArray(rems) || !rems.length) continue;
@@ -95,8 +98,9 @@ async function run() {
     for (const r of due) {
       const ins = await admin.from("push_sent").insert({ user_id: c.user_id, key: `${now.day}|${r.id}` });
       if (ins.error) continue;
-      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, quotes[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % quotes.length]);
+      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes));
       if (!msg) continue;
+      if (r.habit === "__frase" && c.profile?.quoteLang === "en") msg.title = "Quote of the day";
       await sendTo(c.user_id, msg);
       fired++;
     }
