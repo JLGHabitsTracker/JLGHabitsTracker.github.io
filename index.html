@@ -211,6 +211,10 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .wkrow i.half{background:linear-gradient(90deg,var(--dim) 50%,transparent 50%)}
 .wkrow i.fut{box-shadow:inset 0 0 0 1px var(--line)}
 .wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
+.palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
+.prow2{display:flex;align-items:center;gap:2px}
+.pname{flex:1;font-size:13px;color:var(--muted);text-transform:lowercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw.sm{width:30px;height:30px;padding:3px}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -394,7 +398,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.21";
+var VERSION = "1.22";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -624,6 +628,9 @@ var ACCENTS = {
   niebla:{label:"niebla", a:"#aebccb", d:"#56606b"}
 };
 function fontKey(){ var f=S.profile && S.profile.font; return FONTS[f] ? f : "serif"; }
+var PALETTE = [{"k": "oro", "l": "oro", "t": [["#eaddc2", "#675532"], ["#e3ca96", "#6c572d"], ["#d8b56e", "#614e29"], ["#cea046", "#614e29"]]}, {"k": "arena", "l": "arena", "t": [["#e2d9ca", "#5c503d"], ["#d3c1a6", "#5f503a"], ["#c2a984", "#554834"], ["#b29262", "#554834"]]}, {"k": "hueso", "l": "hueso", "t": [["#dad7d2", "#524e47"], ["#c5bfb5", "#534e46"], ["#aea698", "#4b463f"], ["#988d7c", "#4b463f"]]}, {"k": "plata", "l": "plata", "t": [["#d4d6d8", "#4a4c4f"], ["#b9bcc1", "#494c50"], ["#9ea2a9", "#424448"], ["#838991", "#424448"]]}, {"k": "piedra", "l": "piedra", "t": [["#d9d6d3", "#504c49"], ["#c2bdb7", "#514c48"], ["#aba39c", "#494541"], ["#938a80", "#494541"]]}, {"k": "arcilla", "l": "arcilla", "t": [["#e5d2c8", "#604739"], ["#d9b5a1", "#634736"], ["#ca997d", "#593f31"], ["#bb7d58", "#593f31"]]}, {"k": "coral", "l": "coral", "t": [["#ecc7c1", "#693930"], ["#e6a094", "#6e352b"], ["#dc7b6a", "#633027"], ["#d25741", "#633027"]]}, {"k": "rosa", "l": "rosa", "t": [["#e5c8cf", "#603943"], ["#d9a1af", "#633641"], ["#ca7d90", "#59313b"], ["#bb5871", "#59313b"]]}, {"k": "vino", "l": "vino", "t": [["#e3cace", "#5d3c42"], ["#d5a5ad", "#603940"], ["#c4828d", "#563339"], ["#b45f6e", "#563339"]]}, {"k": "oliva", "l": "oliva", "t": [["#deddcf", "#575642"], ["#cbcaae", "#585741"], ["#b7b68f", "#4f4f3a"], ["#a4a270", "#4f4f3a"]]}, {"k": "salvia", "l": "salvia", "t": [["#d2decf", "#475742"], ["#b5cbae", "#475841"], ["#99b78f", "#404f3a"], ["#7da470", "#404f3a"]]}, {"k": "menta", "l": "menta", "t": [["#cce1d8", "#3f5a4f"], ["#a9d1c0", "#3c5d4f"], ["#88bfa8", "#365347"], ["#67ad90", "#365347"]]}, {"k": "petroleo", "l": "petróleo", "t": [["#cbdfe1", "#3e595b"], ["#a7ced2", "#3b5b5e"], ["#86bcc1", "#355254"], ["#64a9af", "#355254"]]}, {"k": "niebla", "l": "niebla", "t": [["#ced6df", "#424c57"], ["#adbdcd", "#404c59"], ["#8da3b9", "#394550"], ["#6e8aa6", "#394550"]]}, {"k": "cobalto", "l": "cobalto", "t": [["#c1cbec", "#303d69"], ["#94a7e6", "#2b3b6e"], ["#6a85dc", "#273563"], ["#4163d2", "#273563"]]}, {"k": "lavanda", "l": "lavanda", "t": [["#d3c9e3", "#483b5e"], ["#b6a4d6", "#473861"], ["#9a80c6", "#403357"], ["#7e5db6", "#403357"]]}];
+var TONES = ["claro","medio","intenso","profundo"];
+PALETTE.forEach(function(f){ f.t.forEach(function(t,i){ ACCENTS[f.k+"-"+i] = {label:f.l+" "+TONES[i], a:t[0], d:t[1]}; }); });
 function accentKey(){ var a=S.profile && S.profile.accent; return ACCENTS[a] ? a : "dorado"; }
 var BGS = {
   calido:{bg:"#11100e", surface:"#1a1815", raise:"#25221c", line:"#322d25"},
@@ -852,9 +859,12 @@ function opt(key, val, label, cur){ return '<button class="chip'+(cur===val?' on
 function viewPers(){
   var pf=S.profile||{};
   var h = notes()+'<div><button class="chip" data-a="go" data-v="ajustes">‹ editar perfil</button></div><div><p class="eyebrow">a tu gusto</p><h1>personalizar</h1></div>';
-  h += '<div class="card"><h3>apariencia</h3><div class="setrow"><span>Color</span><div class="swatches">';
-  Object.keys(ACCENTS).forEach(function(a){
-    h += '<button class="sw'+(accentKey()===a?' on':'')+'" data-a="accent" data-v="'+a+'" aria-label="Color '+ACCENTS[a].label+'" aria-pressed="'+(accentKey()===a)+'"><span style="background:'+ACCENTS[a].a+'"></span></button>';
+  var cur=accentKey();
+  h += '<div class="card"><h3>apariencia</h3><div class="setrow"><span>Color · '+esc(ACCENTS[cur].label)+'</span><div class="palette">';
+  PALETTE.forEach(function(f){
+    h += '<div class="prow2"><span class="pname">'+esc(f.l)+'</span>';
+    f.t.forEach(function(t,i){ var key=f.k+"-"+i; h += '<button class="sw sm'+(cur===key?' on':'')+'" data-a="accent" data-v="'+key+'" aria-label="'+esc(f.l+' '+TONES[i])+'" aria-pressed="'+(cur===key)+'"><span style="background:'+t[0]+'"></span></button>'; });
+    h += '</div>';
   });
   h += '</div></div><div class="setrow"><span>Tipografía</span><div class="tools">';
   Object.keys(FONTS).forEach(function(f){
