@@ -335,7 +335,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.14";
+var VERSION = "1.15";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -1012,12 +1012,20 @@ function applyPull(p){
   p.days.forEach(function(r){ if(!out.days[r.day]) S.days[r.day] = r.v || {}; });
   persistLocal();
 }
+function seedDefaults(){
+  if(!user) return;
+  var pf=S.profile||{};
+  if(pf.remindersSeeded) return;
+  var rs=(pf.reminders||[]).slice();
+  if(!rs.some(function(r){ return r.habit==="__frase"; })) rs.push({id:"rfrase", time:"07:30", habit:"__frase", pending:false});
+  setProfile({reminders:rs, remindersSeeded:true, tz:pf.tz||myTz()});
+}
 async function syncNow(pullToo){
   if(!sb || !user || syncing) return;
   syncing = true; S.sync="busy";
   try{
     await pushOut();
-    if(pullToo) applyPull(await pullAll());
+    if(pullToo){ applyPull(await pullAll()); seedDefaults(); }
     S.sync="ok"; S.syncAt=Date.now();
   }catch(e){ S.sync="err"; }
   syncing = false;
@@ -1040,6 +1048,7 @@ async function afterLogin(){
       S.ok = "Sesión iniciada. Se cargaron tus datos de la nube.";
     }
     if(user.email && S.profile.email!==user.email){ S.profile = Object.assign({}, S.profile, {email:user.email}); markOut("cfg"); persistLocal(); await pushOut(); }
+    seedDefaults();
     S.sync="ok"; S.syncAt=Date.now();
   }catch(e){ S.sync="err"; }
   render();
