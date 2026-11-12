@@ -1,0 +1,27 @@
+create table if not exists public.public_profiles (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  handle text unique not null check (handle ~ '^[a-z0-9_.]{3,20}$'),
+  name text,
+  thumb text,
+  is_public boolean not null default false,
+  summary jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.public_profiles enable row level security;
+create policy "ver perfiles publicos o el mio" on public.public_profiles for select to authenticated using (is_public or (select auth.uid()) = user_id);
+create policy "crear mi perfil publico" on public.public_profiles for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "editar mi perfil publico" on public.public_profiles for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "borrar mi perfil publico" on public.public_profiles for delete to authenticated using ((select auth.uid()) = user_id);
+grant select, insert, update, delete on public.public_profiles to authenticated;
+create table if not exists public.follows (
+  follower uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  following uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower, following),
+  check (follower <> following)
+);
+alter table public.follows enable row level security;
+create policy "ver mis follows y los de perfiles publicos" on public.follows for select to authenticated using ((select auth.uid()) = follower or (select auth.uid()) = following or exists (select 1 from public.public_profiles p where p.user_id = following and p.is_public));
+create policy "seguir perfiles publicos" on public.follows for insert to authenticated with check ((select auth.uid()) = follower and exists (select 1 from public.public_profiles p where p.user_id = following and p.is_public));
+create policy "dejar de seguir" on public.follows for delete to authenticated using ((select auth.uid()) = follower);
+grant select, insert, delete on public.follows to authenticated;

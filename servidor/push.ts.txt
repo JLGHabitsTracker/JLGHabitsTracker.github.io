@@ -79,6 +79,28 @@ function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: 
   return { title: "JLG Habits", body, tag: "resumen" };
 }
 
+// deno-lint-ignore no-explicit-any
+function weekly(habits: any[], logs: Record<string, Record<string, number>>, monday: string, today: string, rest: Record<string, boolean>) {
+  const days: string[] = [];
+  for (let t = new Date(monday + "T00:00:00Z").getTime(); new Date(t).toISOString().slice(0, 10) <= today; t += 864e5) days.push(new Date(t).toISOString().slice(0, 10));
+  // deno-lint-ignore no-explicit-any
+  const v = (h: any, k: string) => Number(logs[k]?.[h.id]) || 0;
+  // deno-lint-ignore no-explicit-any
+  const done = (h: any, k: string) => h.type === "count" ? v(h, k) > 0 && v(h, k) >= (h.goal || 0) : v(h, k) >= 1;
+  const rows = habits.map((h) => {
+    if (h.type === "week") { const n = days.filter((k) => v(h, k) >= 1).length; return { n: h.name, ok: Math.min(n, h.goal || 1), of: h.goal || 1 }; }
+    const act = days.filter((k) => !rest?.[k] && (!Array.isArray(h.days) || !h.days.length || h.days.includes((new Date(k + "T00:00:00Z").getUTCDay() + 6) % 7)));
+    return { n: h.name, ok: act.filter((k) => done(h, k)).length, of: act.length };
+  }).filter((r) => r.of > 0);
+  if (!rows.length) return null;
+  const tot = rows.reduce((a, r) => a + r.ok, 0), all = rows.reduce((a, r) => a + r.of, 0);
+  const sorted = [...rows].sort((a, b) => b.ok / b.of - a.ok / a.of);
+  const best = sorted[0], worst = sorted[sorted.length - 1];
+  let body = `Cumpliste ${tot} de ${all} (${Math.round((tot / all) * 100)}%). Lo mejor: ${best.n} ${best.ok}/${best.of}.`;
+  if (worst.n !== best.n && worst.ok < worst.of) body += ` A mejorar: ${worst.n} ${worst.ok}/${worst.of}.`;
+  return { title: "Tu semana", body, tag: "semana" };
+}
+
 async function run() {
   const { data: cfgs, error } = await admin.from("user_config").select("user_id,habits,profile");
   if (error) throw error;
@@ -94,7 +116,8 @@ async function run() {
     if (!Array.isArray(rems) || !rems.length) continue;
     let now;
     try { now = local(c.profile.tz || "America/Mexico_City"); } catch { now = local("America/Mexico_City"); }
-    const due = rems.filter((r: { time: string }) => { const m = mins(r.time); return m >= 0 && m <= now.mins && now.mins - m < 10; });
+    const wdNow = (new Date(now.day + "T00:00:00Z").getUTCDay() + 6) % 7;
+    const due = rems.filter((r: { time: string; dow?: number }) => { const m = mins(r.time); return m >= 0 && m <= now.mins && now.mins - m < 10 && (r.dow == null || r.dow === wdNow); });
     if (!due.length) continue;
     const { data: rows } = await admin.from("day_logs").select("day,v").eq("user_id", c.user_id).gte("day", now.monday).lte("day", now.day);
     const logs: Record<string, Record<string, number>> = {};
@@ -102,7 +125,7 @@ async function run() {
     for (const r of due) {
       const ins = await admin.from("push_sent").insert({ user_id: c.user_id, key: `${now.day}|${r.id}` });
       if (ins.error) continue;
-      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes), !!c.profile?.rest?.[now.day]);
+      const msg = r.habit === "__semana" ? weekly(Array.isArray(c.habits) ? c.habits : [], logs, now.monday, now.day, c.profile?.rest || {}) : build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes), !!c.profile?.rest?.[now.day]);
       if (!msg) continue;
       if (r.habit === "__frase" && c.profile?.quoteLang === "en") msg.title = "Quote of the day";
       await sendTo(c.user_id, msg);

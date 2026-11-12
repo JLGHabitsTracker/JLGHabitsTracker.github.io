@@ -184,6 +184,21 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .daypick span{display:grid;place-items:center;height:40px;border-radius:12px;background:var(--raise);color:var(--muted);border:1.5px solid transparent;font-weight:600}
 .daypick input:checked + span{border-color:var(--accent);color:var(--accent)}
 .daypick input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.counts{display:flex;gap:14px;margin-top:2px}
+.counts button{border:0;background:none;padding:0;color:var(--muted);font-size:14px}
+.counts b{color:var(--ink);font-weight:600}
+.search{display:flex;gap:8px}
+.search input{flex:1}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.prow{display:flex;align-items:center;gap:12px}
+.prow .hname b{font-weight:600}
+.av{width:44px;height:44px;border-radius:50%;flex:none;background:var(--raise);display:grid;place-items:center;overflow:hidden;color:var(--accent);font-family:var(--display);font-weight:700;text-transform:uppercase}
+.av img{width:100%;height:100%;object-fit:cover}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:15px;background:var(--raise);color:var(--muted);font-size:13px}
+.pill svg{width:14px;height:14px}
+.pill.on{background:var(--accent);color:var(--accent-ink)}
+.pill.off{opacity:.5}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -267,6 +282,12 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
       <input id="pf-email" type="email" maxlength="80" autocomplete="email" placeholder="tu@correo.com">
     </label>
     <p class="small" id="pf-emailnote"></p>
+    <div id="pf-social">
+      <label for="pf-handle">Usuario, para que te encuentren (3 a 20: minúsculas, números, _ o .)
+        <input id="pf-handle" type="text" maxlength="20" autocapitalize="none" autocomplete="username" spellcheck="false" placeholder="joe.gomez">
+      </label>
+      <label for="pf-public" class="checkrow"><input id="pf-public" type="checkbox"> Perfil público: otros pueden seguirte y ver tus hábitos y rachas</label>
+    </div>
     <label for="pf-photo">Foto de perfil
       <input id="pf-photo" type="file" accept="image/*">
     </label>
@@ -349,7 +370,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.17";
+var VERSION = "1.18";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -505,7 +526,7 @@ function persistLocal(){
 var pend = {};
 function pending(key){ var p=pend[key]; return !!p && (p.dirty||p.busy); }
 function save(key, ref, getData){
-  if(LOCAL){ persistLocal(); if(sb && user){ markOut(key); schedulePush(); } return; }
+  if(LOCAL){ persistLocal(); if(sb && user){ markOut(key); schedulePush(); publishSoon(); } return; }
   if(!ref) return;
   var p = pend[key] || (pend[key]={dirty:false,busy:false,timer:0});
   p.dirty = true;
@@ -750,6 +771,7 @@ function badges(s){
   ];
 }
 function viewPerfil(){
+  if(COMMUNITY && sb && user && !S.soc.loaded && !S.soc.busy) socLoad();
   var pf=S.profile||{}, s=stats(), name=pf.name||"";
   var since = pf.since || s.first;
   var h = notes();
@@ -757,7 +779,9 @@ function viewPerfil(){
     + (pf.photo ? '<img src="'+esc(pf.photo)+'" alt="">' : esc((name||"?").charAt(0)))+'</button>'
     + '<div class="hname"><h2>'+esc(name||"tu perfil")+'</h2><div class="meta">'
     + '<span>'+(user && user.email ? 'Correo registrado: '+esc(user.email) : pf.email ? esc(pf.email) : 'Sin correo registrado')+'</span>'
-    + '<span>'+(since ? 'En la bitácora desde el '+esc(longDate(since)) : 'Aún sin registros')+'</span></div></div></div>'
+    + '<span>'+(since ? 'En la bitácora desde el '+esc(longDate(since)) : 'Aún sin registros')+'</span>'
+    + (COMMUNITY && sb && user ? '<span class="counts"><button data-a="go" data-v="comunidad"><b>'+(S.soc.loaded?S.soc.followers.length:'–')+'</b> seguidores</button><button data-a="go" data-v="comunidad"><b>'+(S.soc.loaded?S.soc.following.length:'–')+'</b> siguiendo</button></span>' : '')
+    + '</div></div></div>'
     + '<button class="ghost" data-a="go" data-v="ajustes">editar perfil</button>';
   h += '<div class="stats two">'
     + '<div class="stat"><span class="num">'+s.cur+'</span><small>días de constancia actual</small></div>'
@@ -823,12 +847,12 @@ function viewAjustes(){
 }
 function render(){
   applyLook();
-  app.innerHTML = S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : viewHoy();
-  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes"))); });
+  app.innerHTML = S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : S.view==="comunidad" ? viewComunidad() : viewHoy();
+  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes" || S.view==="comunidad"))); });
 }
 function route(){
   var v = location.hash.replace("#","");
-  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes") ? v : "hoy";
+  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes"||v==="comunidad") ? v : "hoy";
   render();
 }
 window.addEventListener("hashchange", route);
@@ -916,13 +940,17 @@ function openVal(h,k){
 }
 
 /* ---------- profile dialog ---------- */
-var pendingPhoto = undefined;
+var pendingPhoto = undefined, pendingThumb = undefined;
 function openProfile(){
   var pf=S.profile||{};
   pendingPhoto = undefined;
   $("pf-name").value = pf.name||"";
   $("pf-email").value = pf.email||"";
   $("pf-email").parentNode.hidden = !!user;
+  $("pf-social").hidden = !(COMMUNITY && sb && user);
+  $("pf-handle").value = pf.handle||"";
+  $("pf-public").checked = !!pf.public;
+  pendingThumb = undefined;
   $("pf-emailnote").textContent = LOCAL ? "Por ahora solo se muestra en tu perfil. Con la sincronización en la nube será tu correo para iniciar sesión." : "Se muestra en tu perfil.";
   $("pf-photo").value = "";
   $("pf-delphoto").hidden = !pf.photo;
@@ -945,14 +973,29 @@ function shrinkPhoto(file){
 }
 $("pf-photo").addEventListener("change", function(){
   var f=this.files && this.files[0]; if(!f) return;
-  shrinkPhoto(f).then(function(d){ pendingPhoto=d; $("pf-err").hidden=true; }, function(){ $("pf-err").textContent="No se pudo leer esa imagen. Prueba con otra foto."; $("pf-err").hidden=false; });
+  shrinkPhoto(f).then(function(d){ pendingPhoto=d; $("pf-err").hidden=true; thumbFrom(d,96).then(function(t){ pendingThumb=t; }); }, function(){ $("pf-err").textContent="No se pudo leer esa imagen. Prueba con otra foto."; $("pf-err").hidden=false; });
 });
 $("form-profile").addEventListener("submit", function(ev){
   ev.preventDefault();
   var email=$("pf-email").value.trim();
   if(!user && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("pf-err").textContent="Ese correo no parece válido. Revisa que tenga @ y dominio."; $("pf-err").hidden=false; return; }
   var patch={name:$("pf-name").value.trim(), email: user ? (user.email||email) : email};
-  if(pendingPhoto!==undefined) patch.photo=pendingPhoto;
+  if(pendingPhoto!==undefined){ patch.photo=pendingPhoto; patch.thumb = pendingPhoto ? (pendingThumb||"") : ""; }
+  if(COMMUNITY && sb && user){
+    var pf=S.profile||{}, hd=$("pf-handle").value.trim().toLowerCase().replace(/^@/,""), pub=$("pf-public").checked;
+    if(pub && !hd){ $("pf-err").textContent="Para tener perfil público elige un usuario."; $("pf-err").hidden=false; return; }
+    if(hd && !/^[a-z0-9_.]{3,20}$/.test(hd)){ $("pf-err").textContent="El usuario debe tener de 3 a 20 caracteres: minúsculas, números, _ o punto."; $("pf-err").hidden=false; return; }
+    patch.handle=hd; patch.public=pub && !!hd;
+    if(hd!==(pf.handle||"") || patch.public!==!!pf.public){
+      var btn=ev.target.querySelector('button[type="submit"]'); btn.disabled=true;
+      savePublic(hd, patch.public, patch.name).then(function(err){
+        btn.disabled=false;
+        if(err){ $("pf-err").textContent=err; $("pf-err").hidden=false; return; }
+        setProfile(patch); $("dlg-profile").close(); S.soc.loaded=false; render(); publishSoon();
+      }, function(){ btn.disabled=false; $("pf-err").textContent="Sin conexión. Intenta de nuevo."; $("pf-err").hidden=false; });
+      return;
+    }
+  }
   setProfile(patch); $("dlg-profile").close(); render();
 });
 
@@ -1082,11 +1125,12 @@ function applyPull(p){
 }
 function seedDefaults(){
   if(!user) return;
-  var pf=S.profile||{};
-  if(pf.remindersSeeded) return;
-  var rs=(pf.reminders||[]).slice();
-  if(!rs.some(function(r){ return r.habit==="__frase"; })) rs.push({id:"rfrase", time:"07:30", habit:"__frase", pending:false});
-  setProfile({reminders:rs, remindersSeeded:true, tz:pf.tz||myTz()});
+  var pf=S.profile||{}, rs=(pf.reminders||[]).slice(), patch={};
+  if(!pf.remindersSeeded){ if(!rs.some(function(r){ return r.habit==="__frase"; })) rs.push({id:"rfrase", time:"07:30", habit:"__frase", pending:false}); patch.remindersSeeded=true; }
+  if(!pf.weeklySeeded){ if(!rs.some(function(r){ return r.habit==="__semana"; })) rs.push({id:"rsemana", time:"18:00", habit:"__semana", dow:6, pending:false}); patch.weeklySeeded=true; }
+  if(!Object.keys(patch).length) return;
+  patch.reminders=rs; patch.tz=pf.tz||myTz();
+  setProfile(patch);
 }
 async function syncNow(pullToo){
   if(!sb || !user || syncing) return;
@@ -1222,7 +1266,7 @@ function testPush(){
     render();
   }, function(){ S.pushMsg="Sin conexión."; render(); });
 }
-function remLabel(r){ if(r.habit==="__frase") return "Frase del día"; if(!r.habit) return "Resumen del día"; var h=find(r.habit); return h ? h.name : "Hábito eliminado"; }
+function remLabel(r){ if(r.habit==="__frase") return "Frase del día"; if(r.habit==="__semana") return "Resumen semanal (domingos)"; if(!r.habit) return "Resumen del día"; var h=find(r.habit); return h ? h.name : "Hábito eliminado"; }
 function remindersCard(){
   var rs=((S.profile||{}).reminders||[]).slice().sort(function(a,b){ return a.time<b.time?-1:1; });
   var h='<div class="card"><h3>recordatorios</h3>';
@@ -1231,7 +1275,7 @@ function remindersCard(){
   if(S.pushMsg && !S.pushOn) h+='<p class="small" role="status">'+esc(S.pushMsg)+'</p>';
   if(rs.length){
     h+='<ul class="tot">';
-    rs.forEach(function(r){ h+='<li><span>'+esc(r.time)+' · '+esc(remLabel(r))+(r.pending!==false && r.habit!=="__frase"?' · si falta':'')+'</span><button class="chip" data-a="rem-edit" data-id="'+esc(r.id)+'">editar</button></li>'; });
+    rs.forEach(function(r){ h+='<li><span>'+esc(r.time)+' · '+esc(remLabel(r))+(r.pending!==false && r.habit!=="__frase" && r.habit!=="__semana"?' · si falta':'')+'</span><button class="chip" data-a="rem-edit" data-id="'+esc(r.id)+'">editar</button></li>'; });
     h+='</ul>';
   }
   h+='<div class="tools"><button class="ghost" data-a="rem-new">nuevo recordatorio</button></div>'+(S.pushOn ? '' : '<p class="small">Llegan con hasta 5 minutos de margen.</p>')+'</div>';
@@ -1241,7 +1285,7 @@ function openRem(id){
   var rs=(S.profile||{}).reminders||[], r=null;
   rs.forEach(function(x){ if(x.id===id) r=x; });
   remEditing = r ? r.id : null; remDelArmed=false;
-  var opts='<option value="">Resumen del día</option><option value="__frase">Frase del día</option>';
+  var opts='<option value="">Resumen del día</option><option value="__frase">Frase del día</option><option value="__semana">Resumen semanal (domingos)</option>';
   S.habits.forEach(function(x){ opts+='<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>'; });
   $("rm-habit").innerHTML=opts;
   $("rm-time").value = r ? r.time : "21:00";
@@ -1257,9 +1301,118 @@ $("form-rem").addEventListener("submit", function(ev){
   if(!/^\d{2}:\d{2}$/.test(t)){ $("rm-err").textContent="Elige una hora."; $("rm-err").hidden=false; return; }
   var rs=((S.profile||{}).reminders||[]).slice();
   var item={id: remEditing || "r"+Date.now().toString(36), time:t, habit:$("rm-habit").value, pending:$("rm-pending").checked};
+  if(item.habit==="__semana") item.dow=6;
   rs = rs.filter(function(x){ return x.id!==item.id; }); rs.push(item);
   setProfile({reminders:rs, tz:myTz()}); $("dlg-rem").close(); render();
 });
+
+/* ---------- community ---------- */
+var COMMUNITY = false;
+S.soc = {loaded:false, busy:false, following:[], followers:[], ing:[], results:null, q:"", err:"", msg:""};
+var pubTimer = 0;
+function publishSoon(){ if(!COMMUNITY || !(sb && user)) return; clearTimeout(pubTimer); pubTimer=setTimeout(publishPublic, 4000); }
+function thumbFrom(src, size){
+  return new Promise(function(res){
+    var img=new Image();
+    img.onload=function(){ var c=document.createElement("canvas"); c.width=size; c.height=size; var sd=Math.min(img.naturalWidth,img.naturalHeight); c.getContext("2d").drawImage(img,(img.naturalWidth-sd)/2,(img.naturalHeight-sd)/2,sd,sd,0,0,size,size); res(c.toDataURL("image/jpeg",0.8)); };
+    img.onerror=function(){ res(""); };
+    img.src=src;
+  });
+}
+function snapshot(){
+  var t=today(), sc=dayScore(t);
+  return {day:t, pct:sc.pct, streak:dayStreak(), rest:isRest(t), habits:S.habits.slice(0,20).map(function(h){
+    return {n:h.name, i:iconOf(h), s:streak(h), d: isWeek(h) ? weekCount(h,t)>=(h.goal||1) : met(h,t), off: !active(h,t) && !met(h,t), w: isWeek(h) ? weekCount(h,t)+"/"+h.goal : null};
+  })};
+}
+async function publishPublic(){
+  if(!(sb && user)) return;
+  var pf=S.profile||{};
+  if(!pf.handle) return;
+  if(pf.photo && !pf.thumb){ var th=await thumbFrom(pf.photo,96); if(th){ setProfile({thumb:th}); return; } }
+  try{ await sb.from("public_profiles").upsert({user_id:user.id, handle:pf.handle, name:pf.name||"", thumb:pf.photo ? (pf.thumb||null) : null, is_public:!!pf.public, summary: pf.public ? snapshot() : null, updated_at:new Date().toISOString()}); }catch(e){}
+}
+async function savePublic(hd, pub, name){
+  if(!hd){
+    if((S.profile||{}).handle) await sb.from("public_profiles").update({is_public:false, summary:null}).eq("user_id", user.id);
+    return null;
+  }
+  var r=await sb.from("public_profiles").upsert({user_id:user.id, handle:hd, name:name, is_public:pub, updated_at:new Date().toISOString()});
+  if(r.error) return /23505|duplicate|unique/i.test((r.error.code||"")+" "+r.error.message) ? "Ese usuario ya está ocupado. Prueba otro." : "No se pudo guardar el usuario. Revisa tu conexión.";
+  return null;
+}
+async function socLoad(){
+  if(!(sb && user) || S.soc.busy) return;
+  S.soc.busy=true;
+  try{
+    var a=await sb.from("follows").select("following").eq("follower", user.id);
+    var b=await sb.from("follows").select("follower").eq("following", user.id);
+    if(a.error || b.error) throw 0;
+    var ing=a.data.map(function(r){ return r.following; }), ers=b.data.map(function(r){ return r.follower; });
+    var ids=ing.concat(ers).filter(function(v,i,arr){ return arr.indexOf(v)===i; }), map={};
+    if(ids.length){
+      var pr=await sb.from("public_profiles").select("user_id,handle,name,thumb,is_public,summary,updated_at").in("user_id", ids);
+      (pr.data||[]).forEach(function(p){ map[p.user_id]=p; });
+    }
+    S.soc.ing=ing;
+    S.soc.following=ing.map(function(id){ return map[id] || {user_id:id, hidden:true}; });
+    S.soc.followers=ers.map(function(id){ return map[id] || {user_id:id, hidden:true}; });
+    S.soc.loaded=true; S.soc.err="";
+  }catch(e){ S.soc.err="No se pudo cargar la comunidad. Revisa tu conexión."; }
+  S.soc.busy=false;
+  if(!document.querySelector("dialog[open]")) render();
+}
+async function socSearch(){
+  var q=($("soc-q").value||"").trim().toLowerCase().replace(/^@/,"").replace(/[^a-z0-9_.ñáéíóú ]/g,"");
+  S.soc.q=q;
+  if(q.length<2){ S.soc.err="Escribe al menos 2 letras."; render(); return; }
+  var r=await sb.from("public_profiles").select("user_id,handle,name,thumb").eq("is_public", true).neq("user_id", user.id).or("handle.ilike."+q+"%,name.ilike.%"+q+"%").limit(15);
+  S.soc.results = r.error ? [] : r.data; S.soc.err = r.error ? "No se pudo buscar. Revisa tu conexión." : "";
+  render();
+}
+async function socFollow(id, on){
+  var r = on ? await sb.from("follows").insert({follower:user.id, following:id}) : await sb.from("follows").delete().eq("follower", user.id).eq("following", id);
+  if(r.error) S.soc.err="No se pudo "+(on?"seguir":"dejar de seguir")+". Intenta de nuevo.";
+  await socLoad();
+}
+function avatar(thumb, name){ return '<span class="av">'+(thumb && /^data:image\//.test(thumb) ? '<img src="'+esc(thumb)+'" alt="">' : esc((name||"?").charAt(0)))+'</span>'; }
+function followBtn(id){ var on=S.soc.ing.indexOf(id)>=0; return '<button class="chip'+(on?' on':'')+'" data-a="'+(on?'unfollow':'follow')+'" data-id="'+esc(id)+'">'+(on?'siguiendo':'seguir')+'</button>'; }
+function personRow(p){
+  if(p.hidden) return '<li class="prow">'+avatar("","?")+'<div class="hname"><b>Perfil privado</b></div>'+(S.soc.ing.indexOf(p.user_id)>=0 ? followBtn(p.user_id) : '')+'</li>';
+  return '<li class="prow">'+avatar(p.thumb, p.name||p.handle)+'<div class="hname"><b>'+esc(p.name||p.handle)+'</b><span class="small">@'+esc(p.handle)+'</span></div>'+followBtn(p.user_id)+'</li>';
+}
+function personCard(p){
+  if(p.hidden || !p.is_public) return '<li class="card"><div class="prow">'+avatar(p.thumb, p.name||p.handle||"?")+'<div class="hname"><b>'+esc(p.name||p.handle||"Perfil privado")+'</b><span class="small">Este perfil ya no comparte su actividad.</span></div>'+followBtn(p.user_id)+'</div></li>';
+  var s=p.summary||{}, isToday = s.day===today();
+  var h='<li class="card"><div class="prow">'+avatar(p.thumb, p.name||p.handle)+'<div class="hname"><b>'+esc(p.name||p.handle)+'</b><span class="small">@'+esc(p.handle)+'</span></div>'+followBtn(p.user_id)+'</div>';
+  h+='<div class="row"><em class="sub">'+(isToday ? (s.rest ? 'día de descanso' : (Number(s.pct)||0)+'% de hoy') : 'aún sin actividad hoy')+'</em><span class="run"><b class="num">'+(Number(s.streak)||0)+'</b>días</span></div>';
+  if(Array.isArray(s.habits) && s.habits.length){
+    h+='<div class="pills">';
+    s.habits.forEach(function(x){ h+='<span class="pill'+(isToday && x.d ? ' on' : '')+(isToday && x.off ? ' off' : '')+'">'+svg(String(x.i||""))+esc(x.n||"")+(x.w ? ' · '+esc(x.w) : (Number(x.s) ? ' · '+Number(x.s) : ''))+'</span>'; });
+    h+='</div>';
+  }
+  return h+'</li>';
+}
+function viewComunidad(){
+  var h=notes()+'<div><button class="chip" data-a="go" data-v="perfil">‹ perfil</button></div><div><p class="eyebrow">sigue a otros</p><h1>comunidad</h1></div>';
+  if(!COMMUNITY) return h+'<p class="empty">La comunidad estará disponible muy pronto.</p>';
+  if(!(sb && user)) return h+'<p class="empty">Inicia sesión para usar la comunidad.</p>';
+  if(!S.soc.loaded && !S.soc.busy) socLoad();
+  var pf=S.profile||{};
+  if(!pf.handle) h+='<div class="card"><p class="small">Elige tu usuario para que te encuentren y decide si tu perfil es público.</p><div class="tools"><button class="ghost" data-a="edit-profile">elegir usuario</button></div></div>';
+  else h+='<div class="row"><p class="small">@'+esc(pf.handle)+' · perfil <b>'+(pf.public?'público':'privado')+'</b></p><button class="chip" data-a="edit-profile">cambiar</button></div>';
+  h+='<form class="search" id="soc-form"><input id="soc-q" type="search" placeholder="buscar por @usuario o nombre" autocapitalize="none" autocomplete="off" value="'+esc(S.soc.q)+'"><button class="ghost" type="submit">buscar</button></form>';
+  if(S.soc.err) h+='<p class="err">'+esc(S.soc.err)+'</p>';
+  if(S.soc.results){
+    h+= S.soc.results.length ? '<ul class="plist">'+S.soc.results.map(personRow).join("")+'</ul>' : '<p class="small">No encontré perfiles públicos con ese nombre.</p>';
+  }
+  h+='<h3>siguiendo · '+S.soc.following.length+'</h3>';
+  h+= S.soc.following.length ? '<ul class="list">'+S.soc.following.map(personCard).join("")+'</ul>' : '<p class="small">Aún no sigues a nadie. Búscalos por su usuario.</p>';
+  h+='<h3>seguidores · '+S.soc.followers.length+'</h3>';
+  h+= S.soc.followers.length ? '<ul class="plist">'+S.soc.followers.map(personRow).join("")+'</ul>' : '<p class="small">'+(pf.public ? 'Aún nadie te sigue.' : 'Con tu perfil privado nadie puede seguirte.')+'</p>';
+  return h;
+}
+document.addEventListener("submit", function(e){ if(e.target && e.target.id==="soc-form"){ e.preventDefault(); socSearch(); } });
 
 /* ---------- clicks ---------- */
 document.addEventListener("click", function(ev){
@@ -1303,6 +1456,8 @@ document.addEventListener("click", function(ev){
   else if(a==="sync-now"){ syncNow(true); }
   else if(a==="del-photo"){ pendingPhoto=""; el.hidden=true; }
   else if(a==="quotes"){ setProfile({quotes:(S.profile||{}).quotes===false}); render(); }
+  else if(a==="follow"){ socFollow(el.dataset.id, true); }
+  else if(a==="unfollow"){ socFollow(el.dataset.id, false); }
   else if(a==="rest"){ var rr=Object.assign({}, (S.profile||{}).rest||{}); if(rr[k]) delete rr[k]; else rr[k]=true; setProfile({rest:rr}); render(); }
   else if(a==="go"){ location.hash = el.dataset.v; window.scrollTo(0,0); }
   else if(a==="set"){ var o={}, sv=el.dataset.v; o[el.dataset.k] = sv==="true" ? true : sv==="false" ? false : sv; setProfile(o); render(); }
