@@ -52,8 +52,10 @@ function local(tz: string) {
 const mins = (t: string) => { const m = /^(\d{1,2}):(\d{2})$/.exec(t || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : -1; };
 const fmt = (n: number) => Number(n).toLocaleString("es-MX", { maximumFractionDigits: 2 });
 
-type Habit = { id: string; name: string; type: string; goal?: number; unit?: string };
-function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: Record<string, Record<string, number>>, today: string, quote = "") {
+type Habit = { id: string; name: string; type: string; goal?: number; unit?: string; days?: number[] };
+function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: Record<string, Record<string, number>>, today: string, quote = "", restDay = false) {
+  const wd = (new Date(today + "T00:00:00Z").getUTCDay() + 6) % 7;
+  const act = (h: Habit) => !restDay && (h.type === "week" || !Array.isArray(h.days) || !h.days.length || h.days.includes(wd));
   if (r.habit === "__frase") return quote ? { title: "Frase del día", body: quote, tag: "frase" } : null;
   const v = (h: Habit, k: string) => Number(logs[k]?.[h.id]) || 0;
   const weekCount = (h: Habit) => Object.keys(logs).filter((k) => v(h, k) >= 1).length;
@@ -63,14 +65,16 @@ function build(r: { habit?: string; pending?: boolean }, habits: Habit[], logs: 
   if (r.habit) {
     const h = habits.find((x) => x.id === r.habit);
     if (!h) return null;
+    if (!act(h)) return null;
     if (onlyPending && done(h)) return null;
     const body = h.type === "count" ? `Llevas ${fmt(v(h, today))} de ${fmt(h.goal || 0)}${h.unit ? " " + h.unit : ""}.`
       : h.type === "week" ? `Llevas ${weekCount(h)} de ${h.goal} esta semana.`
       : done(h) ? "Ya lo marcaste hoy." : "Aún no lo marcas hoy.";
     return { title: h.name, body, tag: "h-" + h.id };
   }
-  const left = habits.filter((h) => !done(h));
-  if (!habits.length || (onlyPending && !left.length)) return null;
+  const todays = habits.filter(act);
+  const left = todays.filter((h) => !done(h));
+  if (!todays.length || (onlyPending && !left.length)) return null;
   const body = left.length ? `Te ${left.length === 1 ? "falta" : "faltan"} ${left.length}: ${left.map((h) => h.name).join(", ")}.` : "Ya cumpliste todo hoy.";
   return { title: "JLG Habits", body, tag: "resumen" };
 }
@@ -98,7 +102,7 @@ async function run() {
     for (const r of due) {
       const ins = await admin.from("push_sent").insert({ user_id: c.user_id, key: `${now.day}|${r.id}` });
       if (ins.error) continue;
-      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes));
+      const msg = build(r, Array.isArray(c.habits) ? c.habits : [], logs, now.day, ((q: string[]) => q[Math.floor(new Date(now.day + "T00:00:00Z").getTime() / 864e5) % q.length])(c.profile?.quoteLang === "en" ? quotesEn : quotes), !!c.profile?.rest?.[now.day]);
       if (!msg) continue;
       if (r.habit === "__frase" && c.profile?.quoteLang === "en") msg.title = "Quote of the day";
       await sendTo(c.user_id, msg);

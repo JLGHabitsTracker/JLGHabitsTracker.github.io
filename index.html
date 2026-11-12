@@ -174,6 +174,16 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 @keyframes spIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes spOut{to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){#splash{display:none}}
+.card.off{opacity:.45}
+.d.off i::after{width:10px;height:2px;border-radius:1px;background:var(--line)}
+.grid .off{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.restrow{justify-content:flex-end}
+.daypick{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.daypick label{display:block;cursor:pointer}
+.daypick input{position:absolute;opacity:0;width:1px;height:1px}
+.daypick span{display:grid;place-items:center;height:40px;border-radius:12px;background:var(--raise);color:var(--muted);border:1.5px solid transparent;font-weight:600}
+.daypick input:checked + span{border-color:var(--accent);color:var(--accent)}
+.daypick input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
 @media (prefers-reduced-motion:reduce){.bar u{transition:none}}
@@ -223,6 +233,10 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
         <option value="week">Veces por semana</option>
       </select>
     </label>
+    <fieldset id="hf-daysbox">
+      <legend>Días en que lo haces (los demás son de descanso)</legend>
+      <div class="daypick" id="hf-days"></div>
+    </fieldset>
     <div class="two" id="hf-countfields">
       <label for="hf-goal"><span id="hf-goallabel">Meta diaria</span>
         <input id="hf-goal" type="number" inputmode="decimal" min="0" step="any">
@@ -335,7 +349,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.16";
+var VERSION = "1.17";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -403,6 +417,9 @@ function ratio(h,k){ var v=val(h,k); if(h.type!=="count") return v>=1?1:0; retur
 function met(h,k){ return ratio(h,k)>=1; }
 function weekCount(h,k){ var m=monday(k), n=0; for(var i=0;i<7;i++) if(val(h,addDays(m,i))>=1) n++; return n; }
 function weekMet(h,mon){ return weekCount(h,mon) >= (h.goal||1); }
+function wdOf(k){ return (parse(k).getDay()+6)%7; }
+function isRest(k){ var r=(S.profile||{}).rest; return !!(r && r[k]); }
+function active(h,k){ if(isRest(k)) return false; if(isWeek(h) || !Array.isArray(h.days) || !h.days.length) return true; return h.days.indexOf(wdOf(k))>=0; }
 function metCount(k){ var n=0; S.habits.forEach(function(h){ if(met(h,k)) n++; }); return n; }
 function streak(h){
   var n=0, g=0;
@@ -412,9 +429,13 @@ function streak(h){
     while(weekMet(h,m) && g++<1000){ n++; m=addDays(m,-7); }
     return n;
   }
-  var k=today();
-  if(!met(h,k)) k=addDays(k,-1);
-  while(met(h,k) && g++<4000){ n++; k=addDays(k,-1); }
+  var k=today(), first=firstKey();
+  if(active(h,k) && !met(h,k)) k=addDays(k,-1);
+  while(g++<4000 && k>=first){
+    if(met(h,k)) n++;
+    else if(active(h,k)) break;
+    k=addDays(k,-1);
+  }
   return n;
 }
 function firstKey(){ var ks=Object.keys(S.days).sort(); return ks[0]||today(); }
@@ -426,7 +447,11 @@ function bestStreak(h){
     return best;
   }
   var k=firstKey();
-  while(k<=end && g++<4000){ if(met(h,k)){ run++; if(run>best) best=run; } else run=0; k=addDays(k,1); }
+  while(k<=end && g++<4000){
+    if(met(h,k)){ run++; if(run>best) best=run; }
+    else if(active(h,k) && k<end) run=0;
+    k=addDays(k,1);
+  }
   return best;
 }
 function consistency(h){
@@ -438,30 +463,34 @@ function consistency(h){
   var end=today(), start=addDays(end,-29);
   if(h.since && h.since>start) start=h.since;
   var k=start, total=0, good=0;
-  while(k<=end && total<31){ total++; if(met(h,k)) good++; k=addDays(k,1); }
+  var g=0;
+  while(k<=end && g++<31){ if(active(h,k)){ total++; if(met(h,k)) good++; } k=addDays(k,1); }
   return {v:(total?Math.round(good/total*100):0)+"%", l:"últimos 30 días"};
 }
 function dayScore(k){
   var n=0, m=0, sum=0;
   S.habits.forEach(function(h){
     if(isWeek(h) && !met(h,k)) return;
+    if(!active(h,k) && !met(h,k)) return;
     n++; var r=ratio(h,k); sum+=r; if(r>=1) m++;
   });
   return {n:n, m:m, pct:n?Math.round(sum/n*100):0};
 }
 function dayStreak(){
-  var k=today(), n=0;
-  if(!metCount(k)) k=addDays(k,-1);
-  while(metCount(k)>0 && n<4000){ n++; k=addDays(k,-1); }
+  var k=today(), n=0, g=0, first=firstKey();
+  if(!metCount(k) && !isRest(k)) k=addDays(k,-1);
+  while(g++<4000 && k>=first){
+    if(metCount(k)>0) n++;
+    else if(!isRest(k)) break;
+    k=addDays(k,-1);
+  }
   return n;
 }
 function bestDayStreak(){
   var k=firstKey(), end=today(), best=0, run=0, g=0;
-  while(k<=end && g++<4000){ if(metCount(k)>0){ run++; if(run>best) best=run; } else run=0; k=addDays(k,1); }
+  while(k<=end && g++<4000){ if(metCount(k)>0){ run++; if(run>best) best=run; } else if(!isRest(k) && k<end) run=0; k=addDays(k,1); }
   return best;
 }
-
-/* ---------- saving ---------- */
 function loadLocal(){
   try{
     var o = JSON.parse(localStorage.getItem(LKEY)||"null");
@@ -601,12 +630,15 @@ function notes(){
   if(S.saveErr) out+='<p class="note">'+esc(S.saveErr)+'</p>';
   return out;
 }
+var WDN=["L","M","X","J","V","S","D"];
+function daysLabel(h){ var d=h.days; if(!Array.isArray(d) || !d.length || d.length===7) return "todos los días"; if(d.length===5 && d.join()==="0,1,2,3,4") return "entre semana"; return d.slice().sort().map(function(i){ return WDN[i]; }).join(" "); }
 function isSteps(h){ return h.type==="count" && (/paso/.test(plain(h.unit)) || /paso/.test(plain(h.name))); }
 function viewHoy(){
   var k=S.sel, t=today(), d=parse(k), sc=dayScore(k);
   var wk = k===t ? "hoy · "+d.toLocaleDateString("es-MX",{weekday:"long"}) : d.toLocaleDateString("es-MX",{weekday:"long"});
   var ds=dayStreak();
-  var state = !sc.n ? "" : sc.m===sc.n ? "día completo" : sc.m+" de "+sc.n;
+  var rest=isRest(k);
+  var state = rest ? "descanso" : !sc.n ? "" : sc.m===sc.n ? "día completo" : sc.m+" de "+sc.n;
   var h = notes();
   h += '<header class="head"><div class="row"><div class="daynav"><button class="nav" data-a="prev" aria-label="Día anterior">‹</button>'
     + '<span class="wkday">'+esc(wk)+'</span>'
@@ -615,6 +647,7 @@ function viewHoy(){
     + '<div class="row end"><h1>'+esc(d.toLocaleDateString("es-MX",{day:"numeric",month:"long"}))+'</h1><em class="state">'+state+'</em></div>'
     + '<div class="rule"></div>'
     + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div>'
+    + (S.habits.length ? '<div class="tools restrow"><button class="chip'+(rest?' on':'')+'" data-a="rest" aria-pressed="'+rest+'">'+(rest?'día de descanso · quitar':'marcar día de descanso')+'</button></div>' : '')
     + ((S.profile||{}).quotes!==false ? '<p class="quote"><em>'+esc(quoteFor(k))+'</em></p>' : '')+'</header>';
   if(!S.cfgLoaded){ return h+'<p class="empty">Cargando tus hábitos…</p>'; }
   if(!S.habits.length){
@@ -622,13 +655,15 @@ function viewHoy(){
   }
   var mon=monday(k);
   h += '<ul class="list">';
-  S.habits.forEach(function(x){
-    var v=val(x,k), ok=met(x,k), st=streak(x), u = x.unit ? ' '+esc(x.unit) : '';
+  var order=S.habits.filter(function(x){ return active(x,k) || met(x,k); }).concat(S.habits.filter(function(x){ return !active(x,k) && !met(x,k); }));
+  order.forEach(function(x){
+    var v=val(x,k), ok=met(x,k), st=streak(x), u = x.unit ? ' '+esc(x.unit) : '', act=active(x,k);
     var sub, cardMet=ok;
     if(x.type==="count") sub = fmt(v)+' / '+fmt(x.goal)+u;
     else if(isWeek(x)){ var wc=weekCount(x,k); cardMet=wc>=x.goal; sub = wc+' de '+x.goal+' esta semana'+(cardMet?' · cumplida':''); }
     else sub = ok?'hecho':'pendiente';
-    h += '<li class="card'+(cardMet?' met':'')+'"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div>';
+    if(!act && !ok) sub = rest ? 'día de descanso' : 'hoy descansa · '+daysLabel(x);
+    h += '<li class="card'+(cardMet?' met':'')+(!act && !ok?' off':'')+'"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div>';
     if(x.type==="count"){
       h += '<button class="orb'+(ok?' on':'')+'" data-a="inc" data-id="'+x.id+'" aria-label="Sumar '+fmt(x.step)+u+' a '+esc(x.name)+'">'+(ok?'✓':'+')+'</button></div>';
     }else{
@@ -637,7 +672,7 @@ function viewHoy(){
     h += '<div class="wk">';
     for(var i=0;i<7;i++){
       var dk=addDays(mon,i), r=ratio(x,dk);
-      h += '<button class="d'+(r>=1?' met':r>0?' part':'')+(dk===k?' sel':'')+'" data-a="pick" data-k="'+dk+'"'+(dk>t?' disabled':'')
+      h += '<button class="d'+(r>=1?' met':r>0?' part':(active(x,dk)?'':' off'))+(dk===k?' sel':'')+'" data-a="pick" data-k="'+dk+'"'+(dk>t?' disabled':'')
         + ' aria-label="'+esc(longDate(dk,{weekday:"long",day:"numeric"}))+'"><i></i><small>'+WD[i]+'</small></button>';
     }
     h += '</div>';
@@ -655,7 +690,7 @@ function viewHist(){
   var h = notes()+'<div><p class="eyebrow">últimas 12 semanas</p><h1>historial</h1></div>';
   if(!S.habits.length) return h+'<p class="empty">Cuando registres hábitos, aquí verás tus rachas y tu constancia.</p>';
   var t=today(), start=addDays(monday(t),-77);
-  h += '<p class="legend"><span><i style="background:var(--accent)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span></p><ul class="list">';
+  h += '<p class="legend"><span><i style="background:var(--accent)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span><span><i style="box-shadow:inset 0 0 0 1px var(--line)"></i>Descanso</span></p><ul class="list">';
   S.habits.forEach(function(x){
     var c=consistency(x), wk=isWeek(x);
     h += '<li class="card"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3></div></div><div class="stats">'
@@ -666,7 +701,7 @@ function viewHist(){
       var dk=addDays(start,i);
       if(dk>t){ h+='<span class="fut"></span>'; continue; }
       var r=ratio(x,dk);
-      h += '<span class="'+(r>=1?'l2':r>0?'l1':'')+'" title="'+dk+': '+fmt(val(x,dk))+'"></span>';
+      h += '<span class="'+(r>=1?'l2':r>0?'l1':(active(x,dk)?'':'off'))+'" title="'+dk+': '+fmt(val(x,dk))+'"></span>';
     }
     h += '</div></li>';
   });
@@ -677,7 +712,8 @@ function viewHabits(){
   if(!S.cfgLoaded) return h+'<p class="empty">Cargando tus hábitos…</p>';
   h += '<ul class="list">';
   S.habits.forEach(function(x,i){
-    var sub = x.type==="check" ? "Sí o no, cada día" : isWeek(x) ? x.goal+(x.goal===1?" vez":" veces")+" por semana" : "Meta: "+fmt(x.goal)+(x.unit?" "+esc(x.unit):"")+" al día";
+    var sub = x.type==="check" ? "Sí o no" : isWeek(x) ? x.goal+(x.goal===1?" vez":" veces")+" por semana" : "Meta: "+fmt(x.goal)+(x.unit?" "+esc(x.unit):"");
+    if(!isWeek(x)) sub += " · "+daysLabel(x);
     h += '<li class="card"><div class="mrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div></div>'
       + '<div class="tools"><button class="ghost" data-a="edit-habit" data-id="'+x.id+'">editar</button>'
       + '<button class="mini" data-a="up" data-id="'+x.id+'" aria-label="Subir '+esc(x.name)+'"'+(i===0?' disabled':'')+'>↑</button>'
@@ -804,6 +840,11 @@ function find(id){ for(var i=0;i<S.habits.length;i++) if(S.habits[i].id===id) re
   ICON_NAMES.forEach(function(n){ h+='<label><input type="radio" name="hf-icon" value="'+n+'" aria-label="'+n+'"><span>'+svg(n)+'</span></label>'; });
   $("hf-icons").innerHTML=h;
 })();
+(function(){
+  var h="", names=["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
+  for(var i=0;i<7;i++) h+='<label><input type="checkbox" name="hf-day" value="'+i+'" aria-label="'+names[i]+'"><span>'+WDN[i]+'</span></label>';
+  $("hf-days").innerHTML=h;
+})();
 function pickIcon(n){ var r=document.querySelector('input[name="hf-icon"][value="'+n+'"]'); if(r) r.checked=true; }
 function syncType(){
   var t=$("hf-type").value, c=t==="count", w=t==="week";
@@ -812,6 +853,7 @@ function syncType(){
   $("hf-steplabel").hidden = !c;
   $("hf-goallabel").textContent = w ? "Veces por semana" : "Meta diaria";
   $("hf-goal").max = w ? 7 : "";
+  $("hf-daysbox").hidden = w;
 }
 $("hf-type").addEventListener("change", syncType);
 $("hf-name").addEventListener("input", function(){ if(!editing && !document.querySelector('input[name="hf-icon"]:checked.user')) pickIcon(guessIcon(this.value)); });
@@ -826,6 +868,8 @@ function openHabit(h){
   $("hf-step").value = h && h.type==="count" ? h.step : "";
   document.querySelectorAll('input[name="hf-icon"]').forEach(function(r){ r.classList.remove("user"); r.checked=false; });
   pickIcon(h ? iconOf(h) : "check");
+  var dd = h && Array.isArray(h.days) && h.days.length ? h.days : [0,1,2,3,4,5,6];
+  document.querySelectorAll('input[name="hf-day"]').forEach(function(c){ c.checked = dd.indexOf(Number(c.value))>=0; });
   $("hf-del").hidden = !h; $("hf-del").textContent = "Eliminar";
   $("hf-err").hidden = true;
   syncType();
@@ -840,16 +884,20 @@ $("form-habit").addEventListener("submit", function(ev){
   if(!name) err="Escribe un nombre para el hábito.";
   else if(type==="count" && !(goal>0)) err="Escribe una meta diaria mayor que cero.";
   else if(type==="week" && !(goal>=1 && goal<=7)) err="Escribe cuántas veces por semana, de 1 a 7.";
+  var days=[]; document.querySelectorAll('input[name="hf-day"]:checked').forEach(function(c){ days.push(Number(c.value)); });
+  if(!err && type!=="week" && !days.length) err="Elige al menos un día.";
   if(err){ $("hf-err").textContent=err; $("hf-err").hidden=false; return; }
   if(type==="count" && !(step>0)) step = goal>=100 ? r2(goal/10) : 1;
+  var dsave = type==="week" || days.length===7 ? null : days.sort();
   var data = type==="check" ? {name:name,type:"check",icon:ic}
     : type==="week" ? {name:name,type:"week",goal:Math.round(goal),icon:ic}
     : {name:name,type:"count",goal:r2(goal),unit:unit,step:r2(step),icon:ic};
   if(editing){
     var h=find(editing);
-    if(h){ var i=S.habits.indexOf(h); S.habits[i]=Object.assign({id:h.id,since:h.since},data); }
+    if(h){ var i=S.habits.indexOf(h); S.habits[i]=Object.assign({id:h.id,since:h.since},data); if(dsave) S.habits[i].days=dsave; }
   }else{
-    S.habits.push(Object.assign({id:"h"+Date.now().toString(36), since:today()}, data));
+    var nh=Object.assign({id:"h"+Date.now().toString(36), since:today()}, data); if(dsave) nh.days=dsave;
+    S.habits.push(nh);
   }
   saveCfg(); $("dlg-habit").close(); render();
 });
@@ -1255,6 +1303,7 @@ document.addEventListener("click", function(ev){
   else if(a==="sync-now"){ syncNow(true); }
   else if(a==="del-photo"){ pendingPhoto=""; el.hidden=true; }
   else if(a==="quotes"){ setProfile({quotes:(S.profile||{}).quotes===false}); render(); }
+  else if(a==="rest"){ var rr=Object.assign({}, (S.profile||{}).rest||{}); if(rr[k]) delete rr[k]; else rr[k]=true; setProfile({rest:rr}); render(); }
   else if(a==="go"){ location.hash = el.dataset.v; window.scrollTo(0,0); }
   else if(a==="set"){ var o={}, sv=el.dataset.v; o[el.dataset.k] = sv==="true" ? true : sv==="false" ? false : sv; setProfile(o); render(); }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
