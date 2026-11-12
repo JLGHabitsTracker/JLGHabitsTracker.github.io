@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <title>JLG HABITS JOURNAL</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:ital,wght@0,500;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,500;0,700;1,400&family=Bebas+Neue&family=Oswald:wght@500;700&family=Archivo:ital,wght@0,500;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:ital,wght@0,500;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,500;0,700;1,400&family=Bebas+Neue&family=Oswald:wght@500;700&family=Archivo:ital,wght@0,500;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Anton&family=Manrope:wght@500;700&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
 <style>
 /* Layout: one phone-width column on warm black; serif date on top, one card per habit with icon, week dots and tally marks; tab bar pinned below. Single dark theme by choice; accent swappable from the profile. */
 :root{
@@ -335,7 +335,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.15";
+var VERSION = "1.16";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -529,21 +529,32 @@ var FONTS = {
   bebas:{label:"atlética", css:'"Bebas Neue","Arial Narrow",Arial,sans-serif'},
   oswald:{label:"fuerte", css:'"Oswald","Arial Narrow",Arial,sans-serif'},
   archivo:{label:"grotesca", css:'"Archivo",system-ui,-apple-system,sans-serif'},
-  dmserif:{label:"editorial", css:'"DM Serif Display",Georgia,serif'}
+  dmserif:{label:"editorial", css:'"DM Serif Display",Georgia,serif'},
+  anton:{label:"impacto", css:'"Anton","Arial Narrow",Arial,sans-serif'},
+  manrope:{label:"suave", css:'"Manrope",system-ui,-apple-system,sans-serif'},
+  cormorant:{label:"clásica", css:'"Cormorant Garamond",Georgia,serif'}
 };
 var ACCENTS = {
   dorado:{label:"dorado", a:"#d9b97c", d:"#7b6843"},
   plata:{label:"plata", a:"#cfd3d8", d:"#6b6f75"},
   salvia:{label:"salvia", a:"#a9c3a0", d:"#5c6e57"},
   cobalto:{label:"cobalto", a:"#9db2ff", d:"#4f5d93"},
-  coral:{label:"coral", a:"#ec9f8f", d:"#86584e"}
+  coral:{label:"coral", a:"#ec9f8f", d:"#86584e"},
+  arena:{label:"arena", a:"#d9c7a3", d:"#76694f"},
+  hueso:{label:"hueso", a:"#e8e2d6", d:"#6f6a61"},
+  piedra:{label:"piedra", a:"#b8b2a7", d:"#615d56"},
+  arcilla:{label:"arcilla", a:"#cfa58c", d:"#6f584b"},
+  oliva:{label:"oliva", a:"#b8b78c", d:"#5f5f48"},
+  niebla:{label:"niebla", a:"#aebccb", d:"#56606b"}
 };
 function fontKey(){ var f=S.profile && S.profile.font; return FONTS[f] ? f : "serif"; }
 function accentKey(){ var a=S.profile && S.profile.accent; return ACCENTS[a] ? a : "dorado"; }
 var BGS = {
   calido:{bg:"#11100e", surface:"#1a1815", raise:"#25221c", line:"#322d25"},
   negro:{bg:"#000000", surface:"#0e0e0d", raise:"#1a1917", line:"#292724"},
-  carbon:{bg:"#17181a", surface:"#1f2023", raise:"#2a2b2f", line:"#36383c"}
+  carbon:{bg:"#17181a", surface:"#1f2023", raise:"#2a2b2f", line:"#36383c"},
+  espresso:{bg:"#14100c", surface:"#1d1813", raise:"#28211a", line:"#352c22"},
+  pizarra:{bg:"#101418", surface:"#181d22", raise:"#22282e", line:"#2e353c"}
 };
 function bgKey(){ var b=S.profile && S.profile.bgTheme; return BGS[b] ? b : "calido"; }
 function applyLook(){
@@ -756,7 +767,7 @@ function viewPers(){
   h += '</div></div><div class="setrow"><span>Frase del día</span><div class="tools"><button class="chip'+((S.profile||{}).quotes!==false?' on':'')+'" data-a="quotes" aria-pressed="'+((S.profile||{}).quotes!==false)+'">'+((S.profile||{}).quotes!==false?'visible':'oculta')+'</button></div></div></div>';
   h += '<div class="card"><h3>frases</h3><div class="setrow"><span>Idioma de las frases</span><div class="tools">'+opt("quoteLang","es","español",pf.quoteLang==="en"?"en":"es")+opt("quoteLang","en","english",pf.quoteLang==="en"?"en":"es")+'</div></div></div>';
   h += '<div class="card"><h3>pantalla</h3>'
-    + '<div class="setrow"><span>Fondo</span><div class="tools">'+opt("bgTheme","calido","negro cálido",bgKey())+opt("bgTheme","negro","negro puro",bgKey())+opt("bgTheme","carbon","carbón",bgKey())+'</div></div>'
+    + '<div class="setrow"><span>Fondo</span><div class="tools">'+opt("bgTheme","calido","negro cálido",bgKey())+opt("bgTheme","negro","negro puro",bgKey())+opt("bgTheme","carbon","carbón",bgKey())+opt("bgTheme","espresso","espresso",bgKey())+opt("bgTheme","pizarra","pizarra",bgKey())+'</div></div>'
     + '<div class="setrow"><span>Tamaño del texto</span><div class="tools">'+opt("size","normal","normal",pf.size==="grande"?"grande":"normal")+opt("size","grande","grande",pf.size==="grande"?"grande":"normal")+'</div></div>'
     + '<div class="setrow"><span>Rachas en las tarjetas</span><div class="tools">'+opt("tally","true","rayitas y número",String(pf.tally!==false))+opt("tally","false","solo número",String(pf.tally!==false))+'</div></div></div>';
   return h;
@@ -952,13 +963,22 @@ function pasteInto(h){
 function processParams(){
   if(paramsDone) return; paramsDone=true;
   var q; try{ q=new URLSearchParams(location.search); }catch(e){ return; }
-  var who=q.get("registrar"), v=numberFrom(q.get("valor"));
-  if(!who || !(v>=0)) return;
-  var w=plain(who), h=null;
-  S.habits.forEach(function(x){ if(!h && (x.id===who || plain(x.name)===w || (x.type==="count" && plain(x.unit)===w))) h=x; });
+  var items=[], skip={v:1,t:1,registrar:1,valor:1};
+  if(q.get("registrar")) items.push([q.get("registrar"), q.get("valor")]);
+  q.forEach(function(val,key){ if(!skip[key]) items.push([key,val]); });
+  if(!items.length) return;
   try{ history.replaceState(null,"",location.pathname+location.hash); }catch(e){}
-  if(!h){ S.note="No encontré un hábito llamado “"+who+"”."; render(); return; }
-  setVal(h,today(),v); S.ok="Se registraron "+fmt(v)+(h.unit?" "+h.unit:"")+" en "+h.name+" desde el atajo."; render();
+  var ok=[], miss=[];
+  items.forEach(function(it){
+    var w=plain(it[0]), v=numberFrom(it[1]), h=null;
+    if(!(v>=0)) return;
+    S.habits.forEach(function(x){ if(!h && (x.id===it[0] || plain(x.name)===w || (x.type==="count" && plain(x.unit)===w))) h=x; });
+    if(!h){ miss.push(it[0]); return; }
+    setVal(h,today(),v); ok.push(fmt(v)+(h.unit?" "+h.unit:"")+" en "+h.name);
+  });
+  if(ok.length) S.ok="Desde el atajo: "+ok.join(", ")+".";
+  if(miss.length) S.note="No encontré "+(miss.length===1?"el hábito":"los hábitos")+" “"+miss.join("”, “")+"”. Revisa que se llamen igual en la app.";
+  render();
 }
 
 /* ---------- cloud sync (Supabase) ---------- */
@@ -1058,7 +1078,8 @@ function startSync(){
   loadOut();
   sb.auth.getSession().then(function(r){
     var s = r && r.data && r.data.session;
-    if(s && s.user){ user = s.user; syncNow(true); }
+    if(s && s.user){ user = s.user; syncNow(true).then(processParams, processParams); }
+    else processParams();
   });
   sb.auth.onAuthStateChange(function(ev, session){
     if(ev==="SIGNED_OUT"){ user=null; render(); }
@@ -1251,6 +1272,7 @@ document.addEventListener("click", function(ev){
 /* ---------- self update ---------- */
 function checkUpdate(){
   if(!LOCAL) return;
+  if(!paramsDone && location.search.replace(/[?&]v=[^&]*/,"").length>1){ setTimeout(checkUpdate, 4000); return; }
   fetch("version.json?"+Date.now(), {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(j){
     if(!j || !j.v || j.v===VERSION) return;
     if(location.search.indexOf("v="+j.v)>=0) return;
@@ -1264,7 +1286,7 @@ function start(){
   if(LOCAL){
     loadLocal();
     try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
-    route(); processParams(); startSync(); initPush(); checkUpdate(); return;
+    route(); if(!sb) processParams(); startSync(); initPush(); checkUpdate(); return;
   }
   route();
   var slow = setTimeout(function(){
