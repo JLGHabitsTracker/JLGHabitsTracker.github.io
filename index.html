@@ -370,7 +370,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.18";
+var VERSION = "1.19";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -1307,7 +1307,7 @@ $("form-rem").addEventListener("submit", function(ev){
 });
 
 /* ---------- community ---------- */
-var COMMUNITY = false;
+var COMMUNITY = true;
 S.soc = {loaded:false, busy:false, following:[], followers:[], ing:[], results:null, q:"", err:"", msg:""};
 var pubTimer = 0;
 function publishSoon(){ if(!COMMUNITY || !(sb && user)) return; clearTimeout(pubTimer); pubTimer=setTimeout(publishPublic, 4000); }
