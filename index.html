@@ -322,7 +322,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.10";
+var VERSION = "1.11";
 var $ = function(id){ return document.getElementById(id); };
 var app = $("app");
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -1122,14 +1122,13 @@ function remindersCard(){
   var h='<div class="card"><h3>recordatorios</h3>';
   if(!pushSupported()) h+='<p class="small">Aquí no se pueden recibir notificaciones. En el iPhone, abre la app desde el ícono de la pantalla de inicio (iOS 16.4 o más reciente).</p>';
   else if(!S.pushOn) h+='<p class="small">Activa las notificaciones en este dispositivo para recibir tus recordatorios.</p><div class="tools"><button class="primary" data-a="push-on">activar notificaciones</button></div>';
-  else h+='<p class="small">Notificaciones activas en este dispositivo.</p><div class="tools"><button class="ghost" data-a="push-test">enviar una de prueba</button></div>';
-  if(S.pushMsg) h+='<p class="small" role="status">'+esc(S.pushMsg)+'</p>';
+  if(S.pushMsg && !S.pushOn) h+='<p class="small" role="status">'+esc(S.pushMsg)+'</p>';
   if(rs.length){
     h+='<ul class="tot">';
     rs.forEach(function(r){ h+='<li><span>'+esc(r.time)+' · '+esc(remLabel(r))+(r.pending!==false && r.habit!=="__frase"?' · si falta':'')+'</span><button class="chip" data-a="rem-edit" data-id="'+esc(r.id)+'">editar</button></li>'; });
     h+='</ul>';
   }
-  h+='<div class="tools"><button class="ghost" data-a="rem-new">nuevo recordatorio</button></div><p class="small">Llegan con hasta 5 minutos de margen.</p></div>';
+  h+='<div class="tools"><button class="ghost" data-a="rem-new">nuevo recordatorio</button></div>'+(S.pushOn ? '' : '<p class="small">Llegan con hasta 5 minutos de margen.</p>')+'</div>';
   return h;
 }
 function openRem(id){
