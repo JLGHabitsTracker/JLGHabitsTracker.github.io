@@ -12,7 +12,22 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <title>JLG HABITS JOURNAL</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Barlow+Condensed:ital,wght@0,500;0,700;1,400&family=IBM+Plex+Mono:ital,wght@0,500;0,700;1,400&family=Bebas+Neue&family=Oswald:wght@500;700&family=Archivo:ital,wght@0,500;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Anton&family=Manrope:wght@500;700&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script>
+/* Only the chosen display typeface is downloaded at start; the rest load when the picker opens. */
+var JLG_FAM = {"serif": "Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,400", "sans": "", "cond": "Barlow+Condensed:ital,wght@0,500;0,700;1,400", "mono": "IBM+Plex+Mono:ital,wght@0,500;0,700;1,400", "bebas": "Bebas+Neue", "oswald": "Oswald:wght@500;700", "archivo": "Archivo:ital,wght@0,500;0,700;1,400", "dmserif": "DM+Serif+Display:ital@0;1", "anton": "Anton", "manrope": "Manrope:wght@500;700", "cormorant": "Cormorant+Garamond:ital,wght@0,600;0,700;1,500"};
+function jlgFont(k){
+  var f = JLG_FAM[k]; if(!f || document.getElementById("gf-"+k)) return;
+  var l = document.createElement("link"); l.id = "gf-"+k; l.rel = "stylesheet"; l.crossOrigin = "anonymous";
+  l.href = "https://fonts.googleapis.com/css2?family="+f+"&display=swap"; document.head.appendChild(l);
+}
+(function(){
+  var k = "serif";
+  try{ var o = JSON.parse(localStorage.getItem("bitacora-habitos-v1")||"null"); if(o && o.profile && JLG_FAM.hasOwnProperty(o.profile.font)) k = o.profile.font; }catch(e){}
+  jlgFont(k);
+})();
+</script>
 <style>
 /* Layout: one phone-width column on warm black; serif date on top, one card per habit with icon, week dots and tally marks; tab bar pinned below. Single dark theme by choice; accent swappable from the profile. */
 :root{
@@ -394,11 +409,11 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
   </form>
 </dialog>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="vendor/supabase.js"></script>
 <script>
 (function(){
 "use strict";
-var VERSION = "1.22";
+var VERSION = "1.23";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -645,6 +660,7 @@ function applyLook(){
   rs.setProperty("--bg",bgT.bg); rs.setProperty("--surface",bgT.surface); rs.setProperty("--raise",bgT.raise); rs.setProperty("--line",bgT.line);
   app.style.zoom = (S.profile && S.profile.size==="grande") ? "1.12" : "";
   var r=document.documentElement.style, ac=ACCENTS[accentKey()];
+  jlgFont(fontKey());
   r.setProperty("--display", FONTS[fontKey()].css);
   r.setProperty("--accent", ac.a);
   r.setProperty("--dim", ac.d);
@@ -867,6 +883,7 @@ function viewPers(){
     h += '</div>';
   });
   h += '</div></div><div class="setrow"><span>Tipografía</span><div class="tools">';
+  Object.keys(FONTS).forEach(jlgFont);
   Object.keys(FONTS).forEach(function(f){
     h += '<button class="chip'+(fontKey()===f?' on':'')+'" data-a="font" data-v="'+f+'" aria-pressed="'+(fontKey()===f)+'" style="font-family:'+esc(FONTS[f].css)+'">'+FONTS[f].label+'</button>';
   });
@@ -1303,7 +1320,7 @@ function b64u(s){ var p="=".repeat((4-s.length%4)%4), b=atob((s+p).replace(/-/g,
 function myTz(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City"; }catch(e){ return "America/Mexico_City"; } }
 function initPush(){
   if(!LOCAL || !pushSupported()) return;
-  navigator.serviceWorker.register("sw.js").then(function(){ return navigator.serviceWorker.ready; }).then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(s){
+  navigator.serviceWorker.ready.then(function(reg){ return reg.pushManager.getSubscription(); }).then(function(s){
     S.pushOn = !!s && Notification.permission==="granted";
     if(S.view==="perfil" && !document.querySelector("dialog[open]")) render();
   }).catch(function(){});
@@ -1560,6 +1577,7 @@ function start(){
   if(LOCAL){
     loadLocal();
     try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+    try{ if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){}); }catch(e){}
     route(); if(!sb) processParams(); startSync(); initPush(); checkUpdate(); return;
   }
   route();
