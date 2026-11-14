@@ -228,6 +228,21 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
 .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
 .prow2{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{margin:0;max-width:86%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px}
+.msg.ai{align-self:flex-start;background:var(--raise);border:1px solid var(--line);border-bottom-left-radius:6px}
+.msg.sys{align-self:center;max-width:100%;padding:2px 0;color:var(--muted);font-size:13px;text-align:center}
+.typing{display:flex;gap:5px;padding:14px 16px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:asdot 1s infinite ease-in-out}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes asdot{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.6}}
+.pv{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--accent);border-radius:16px}
+.askbar{display:flex;gap:8px;align-items:flex-end}
+.askbar textarea{flex:1;min-height:48px;max-height:140px;border-radius:24px;border:1px solid var(--line);background:var(--bg);padding:13px 16px;font-size:16px;line-height:1.35;resize:none;color:var(--ink)}
+.askbar .primary{flex:none;width:48px;padding:0;font-size:20px}
+.askbar .primary:disabled{opacity:.4}
 .how{margin:4px 0}
 .how summary{cursor:pointer;color:var(--accent);font-size:14px;padding:6px 0}
 .how ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
@@ -426,7 +441,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.26";
+var VERSION = "1.27";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -435,6 +450,7 @@ var $ = function(id){ return document.getElementById(id); };
   setTimeout(function(){ sp.remove(); }, 2000);
 })();
 var app = $("app");
+var AS = {chat:[], busy:false, preview:null, left:null, scroll:false};
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
 var fmt = function(n){ return Number(n).toLocaleString("es-MX",{maximumFractionDigits:2}); };
 var r2 = function(n){ return Math.round(n*100)/100; };
@@ -914,6 +930,7 @@ function opt(key, val, label, cur){ return '<button class="chip'+(cur===val?' on
 function viewPers(){
   var pf=S.profile||{};
   var h = notes()+'<div><button class="chip" data-a="go" data-v="ajustes">‹ editar perfil</button></div><div><p class="eyebrow">a tu gusto</p><h1>personalizar</h1></div>';
+  h += '<div class="card"><div class="row"><div class="hname"><h3>asistente</h3><em class="sub">dime qué estilo quieres y lo armo</em></div><button class="primary" data-a="go" data-v="asistente">abrir</button></div></div>';
   var cur=accentKey();
   h += '<div class="card"><h3>apariencia</h3><div class="setrow"><span>Color · '+esc(ACCENTS[cur].label)+'</span><div class="palette">';
   var grp="";
@@ -953,13 +970,23 @@ function viewAjustes(){
   return h;
 }
 function render(){
-  applyLook();
-  app.innerHTML = S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : S.view==="comunidad" ? viewComunidad() : viewHoy();
-  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes" || S.view==="comunidad"))); });
+  if(S.view!=="asistente" && AS.preview) AS.preview=null;
+  if(AS.preview){ var real=S.profile; S.profile=Object.assign({}, real, AS.preview); try{ applyLook(); } finally{ S.profile=real; } }
+  else applyLook();
+  var inp=document.getElementById("as-input"), keep=inp ? {v:inp.value, f:document.activeElement===inp} : null;
+  app.innerHTML = S.view==="asistente" ? viewAsistente() : S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : S.view==="comunidad" ? viewComunidad() : viewHoy();
+  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes" || S.view==="comunidad" || S.view==="asistente"))); });
+  if(S.view==="asistente"){
+    var ni=document.getElementById("as-input");
+    if(ni && keep){ ni.value=keep.v; if(keep.f) ni.focus(); }
+    if(ni) asGrow(ni);
+    if(AS.scroll){ AS.scroll=false; window.scrollTo(0, document.body.scrollHeight); }
+  }
 }
 function route(){
   var v = location.hash.replace("#","");
-  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes"||v==="comunidad") ? v : "hoy";
+  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes"||v==="comunidad"||v==="asistente") ? v : "hoy";
+  if(S.view==="asistente") AS.scroll=true;
   render();
 }
 window.addEventListener("hashchange", route);
@@ -1366,6 +1393,100 @@ function atajoCard(){
   if(AT.msg) h += '<p class="small">'+esc(AT.msg)+'</p>';
   return h+'</div>';
 }
+/* ---------- AI assistant for personalization ---------- */
+var AS_SUG = ["algo más agresivo", "minimalista en grises", "tonos fríos y calmados", "más fácil de leer"];
+function asCatalog(){
+  return {
+    colores: Object.keys(ACCENTS).filter(function(k){ return k!=="custom" && /^#[0-9a-f]{6}$/i.test(ACCENTS[k].a); }).map(function(k){ return {k:k, l:ACCENTS[k].label, c:ACCENTS[k].a}; }),
+    tipografias: Object.keys(FONTS).map(function(k){ return {k:k, l:FONTS[k].label}; }),
+    fondos: Object.keys(BGS).map(function(k){ return {k:k, l:BG_LABELS[k]||BGS[k].label}; })
+  };
+}
+function asLook(){ return Object.assign({}, S.profile||{}, AS.preview||{}); }
+/* Keep only values this version of the app knows, and only those that actually change something. */
+function asValid(c){
+  var out={}, now=asLook();
+  if(!c || typeof c!=="object") return out;
+  if(c.accent==="custom" && /^#[0-9a-f]{6}$/i.test(c.accentHex||"")){ if(now.accent!=="custom" || String(now.accentHex).toLowerCase()!==c.accentHex.toLowerCase()){ out.accent="custom"; out.accentHex=c.accentHex.toLowerCase(); } }
+  else if(typeof c.accent==="string" && c.accent!=="custom" && ACCENTS[c.accent] && c.accent!==accentKey()) out.accent=c.accent;
+  if(typeof c.bgTheme==="string" && BGS[c.bgTheme] && c.bgTheme!==bgKey()) out.bgTheme=c.bgTheme;
+  if(typeof c.font==="string" && FONTS[c.font] && c.font!==fontKey()) out.font=c.font;
+  if((c.size==="normal"||c.size==="grande") && c.size!==(now.size==="grande"?"grande":"normal")) out.size=c.size;
+  if(typeof c.tally==="boolean" && c.tally!==(now.tally!==false)) out.tally=c.tally;
+  if(typeof c.quotes==="boolean" && c.quotes!==(now.quotes!==false)) out.quotes=c.quotes;
+  if((c.quoteLang==="es"||c.quoteLang==="en") && c.quoteLang!==(now.quoteLang==="en"?"en":"es")) out.quoteLang=c.quoteLang;
+  return out;
+}
+function asLabel(p){
+  var t=[];
+  if(p.accent) t.push("color "+(p.accent==="custom" ? "propio" : (ACCENTS[p.accent]||{}).label));
+  if(p.bgTheme) t.push("fondo "+(BG_LABELS[p.bgTheme]||BGS[p.bgTheme].label));
+  if(p.font) t.push("tipografía "+FONTS[p.font].label);
+  if(p.size) t.push("texto "+p.size);
+  if(p.tally!=null) t.push(p.tally ? "rayitas y número" : "solo número");
+  if(p.quotes!=null) t.push("frase del día "+(p.quotes ? "visible" : "oculta"));
+  if(p.quoteLang) t.push("frases en "+(p.quoteLang==="en" ? "inglés" : "español"));
+  return t.join(" · ");
+}
+var AS_ERR = {
+  sesion:"Tu sesión expiró. Cierra sesión y vuelve a entrar.",
+  config:"El asistente todavía no tiene configurada su llave de Anthropic.",
+  llave:"La llave de Anthropic no es válida. Revísala en Supabase.",
+  saldo:"Se acabó el saldo de Anthropic. Recárgalo en la consola de Anthropic.",
+  ocupado:"El asistente está saturado. Intenta en un momento."
+};
+async function asSend(text){
+  text=String(text||"").trim().slice(0,400);
+  if(!text || AS.busy || !sb || !user) return;
+  AS.chat.push({role:"user", text:text}); AS.busy=true; AS.scroll=true; render();
+  var msg="", ch={};
+  try{
+    var r = await sb.functions.invoke("asistente", {body:{
+      mensajes: AS.chat.filter(function(m){ return m.role!=="sys"; }).slice(-12).map(function(m){ return {role:m.role, text:m.text}; }),
+      actual: asLook(), catalogo: asCatalog()
+    }});
+    if(r.error){
+      var code="", info={};
+      try{ info = await r.error.context.json(); code = info.error||""; }catch(e){}
+      if(code==="limite") msg="Llegaste al límite de "+(info.limite||"")+" mensajes de hoy. Mañana se reinicia.";
+      else if(AS_ERR[code]) msg=AS_ERR[code];
+      else msg = navigator.onLine===false || /fetch/i.test(String(r.error.name)) ? "Sin conexión. Revisa tu internet e intenta de nuevo." : "No pude responder. Intenta de nuevo.";
+      AS.chat.push({role:"sys", text:msg});
+    }else{
+      var d=r.data||{};
+      ch = asValid(d.cambios);
+      AS.chat.push({role:"assistant", text:String(d.mensaje||"").slice(0,800) || "Te dejo la propuesta en vista previa."});
+      if(typeof d.restantes==="number") AS.left=d.restantes;
+      if(Object.keys(ch).length) AS.preview=Object.assign({}, AS.preview||{}, ch);
+    }
+  }catch(e){ AS.chat.push({role:"sys", text:"Sin conexión. Revisa tu internet e intenta de nuevo."}); }
+  AS.busy=false; AS.scroll=true;
+  if(!document.querySelector("dialog[open]")) render();
+}
+function asGrow(t){ t.style.height="auto"; t.style.height=Math.min(140, t.scrollHeight)+"px"; }
+function viewAsistente(){
+  var h = notes()+'<div><button class="chip" data-a="go" data-v="personalizar">‹ personalizar</button></div><div><p class="eyebrow">tu estilo, en palabras</p><h1>asistente</h1></div>';
+  if(!sb || !user) return h+'<div class="card"><p class="small">Inicia sesión para usar el asistente: así tus cambios se guardan en tu cuenta.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div></div>';
+  h += '<div class="card"><div class="chat" aria-live="polite">';
+  if(!AS.chat.length) h += '<p class="msg ai">Dime cómo quieres ver tu app y armo el estilo: color, fondo, tipografía y más. Lo ves en vista previa antes de guardarlo.</p>';
+  AS.chat.forEach(function(m){ h += '<p class="msg '+(m.role==="user" ? "me" : m.role==="assistant" ? "ai" : "sys")+'">'+esc(m.text)+'</p>'; });
+  if(AS.busy) h += '<p class="msg ai typing" role="status" aria-label="Escribiendo"><i></i><i></i><i></i></p>';
+  h += '</div>';
+  if(AS.preview) h += '<div class="pv"><p class="small"><b>vista previa</b> · '+esc(asLabel(AS.preview))+'</p><div class="tools"><button class="primary" data-a="as-keep">quedármelo</button><button class="ghost" data-a="as-undo">deshacer</button></div></div>';
+  if(!AS.chat.length) h += '<div class="tools">'+AS_SUG.map(function(t){ return '<button class="chip" data-a="as-sug" data-v="'+esc(t)+'">'+esc(t)+'</button>'; }).join("")+'</div>';
+  h += '<form class="askbar" id="as-form"><textarea id="as-input" rows="1" maxlength="400" placeholder="Ej. algo agresivo en rojo" aria-label="Escribe al asistente"></textarea><button class="primary" type="submit" aria-label="Enviar"'+(AS.busy?' disabled':'')+'>↑</button></form>';
+  if(AS.left!==null && AS.left<=5) h += '<p class="small">Te quedan '+AS.left+' mensajes hoy.</p>';
+  return h+'</div>';
+}
+document.addEventListener("submit", function(ev){
+  if(!ev.target || ev.target.id!=="as-form") return;
+  ev.preventDefault();
+  var t=document.getElementById("as-input"), v=t.value; t.value=""; asSend(v);
+});
+document.addEventListener("keydown", function(ev){
+  if(ev.target && ev.target.id==="as-input" && ev.key==="Enter" && !ev.shiftKey && !ev.isComposing){ ev.preventDefault(); var v=ev.target.value; ev.target.value=""; asSend(v); }
+});
+document.addEventListener("input", function(ev){ if(ev.target && ev.target.id==="as-input") asGrow(ev.target); });
 /* login dialog */
 function openLogin(){
   $("lg-email").value = (S.profile && S.profile.email) || "";
@@ -1650,6 +1771,9 @@ document.addEventListener("click", function(ev){
   else if(a==="set"){ var o={}, sv=el.dataset.v; o[el.dataset.k] = sv==="true" ? true : sv==="false" ? false : sv; setProfile(o); render(); }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
   else if(a==="atajo-new"){ newAtajo(); }
+  else if(a==="as-sug"){ asSend(el.dataset.v); }
+  else if(a==="as-keep"){ if(AS.preview){ setProfile(AS.preview); AS.preview=null; AS.chat.push({role:"sys", text:"Guardado."}); AS.scroll=true; render(); } }
+  else if(a==="as-undo"){ AS.preview=null; AS.chat.push({role:"sys", text:"Vista previa descartada."}); AS.scroll=true; render(); }
   else if(a==="atajo-copy"){ var w=el.dataset.v; copyText(w==="url"?AT_URL:w==="key"?SB_KEY:AT.token, w==="url"?"Dirección copiada.":w==="key"?"apikey copiada.":"Token copiado."); }
   else if(a==="atajo-refresh"){ AT.loaded=false; AT.msg=""; syncNow(true); render(); }
   else if(a==="accent"){ setProfile({accent:el.dataset.v}); render(); }

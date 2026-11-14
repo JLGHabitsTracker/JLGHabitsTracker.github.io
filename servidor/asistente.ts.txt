@@ -1,0 +1,174 @@
+// JLG Habits: asistente de personalización.
+// Recibe lo que escribe el usuario, su configuración actual y el catálogo de opciones de la app,
+// pregunta a Claude y devuelve un mensaje corto más los cambios propuestos (la app los muestra en vista previa).
+// Secretos necesarios en Supabase: ANTHROPIC_API_KEY. Opcional: ASISTENTE_MODELO, ASISTENTE_LIMITE.
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+const MODEL = Deno.env.get("ASISTENTE_MODELO") || "claude-haiku-5-5";
+const LIMITE = Number(Deno.env.get("ASISTENTE_LIMITE") || 30);
+const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+
+type Opt = { k: string; l: string; c?: string };
+const KEY = /^[a-z0-9-]{1,24}$/;
+const HEX = /^#[0-9a-f]{6}$/i;
+
+function opts(v: unknown, max: number): Opt[] {
+  if (!Array.isArray(v)) return [];
+  const out: Opt[] = [];
+  for (const o of v.slice(0, max)) {
+    if (!o || typeof o !== "object") continue;
+    const k = String((o as Opt).k ?? ""), l = String((o as Opt).l ?? "").slice(0, 40), c = String((o as Opt).c ?? "");
+    if (!KEY.test(k) || !l) continue;
+    out.push(HEX.test(c) ? { k, l, c } : { k, l });
+  }
+  return out;
+}
+const list = (a: Opt[]) => a.map((o) => `${o.k} = ${o.l}${o.c ? " " + o.c : ""}`).join("\n");
+
+function history(v: unknown) {
+  const raw = Array.isArray(v) ? v.slice(-12) : [];
+  const msgs: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of raw) {
+    const role = m?.role === "assistant" ? "assistant" : m?.role === "user" ? "user" : null;
+    const text = typeof m?.text === "string" ? m.text.trim().slice(0, 500) : "";
+    if (!role || !text) continue;
+    const last = msgs[msgs.length - 1];
+    if (last && last.role === role) last.content += "\n" + text;
+    else msgs.push({ role, content: text });
+  }
+  while (msgs.length && msgs[0].role !== "user") msgs.shift();
+  return msgs;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "metodo" }, 405);
+  try {
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) return json({ error: "config" }, 503);
+
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const { data: auth } = await admin.auth.getUser(token);
+    const user = auth?.user;
+    if (!user) return json({ error: "sesion" }, 401);
+
+    const raw = await req.text();
+    if (raw.length > 40000) return json({ error: "grande" }, 413);
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(raw); } catch { return json({ error: "formato" }, 400); }
+
+    const msgs = history(body.mensajes);
+    if (!msgs.length || msgs[msgs.length - 1].role !== "user") return json({ error: "vacio" }, 400);
+
+    const cat = (body.catalogo ?? {}) as Record<string, unknown>;
+    const accents = opts(cat.colores, 220), fonts = opts(cat.tipografias, 30), bgs = opts(cat.fondos, 40);
+    if (!accents.length || !fonts.length || !bgs.length) return json({ error: "catalogo" }, 400);
+
+    const used = await admin.rpc("asistente_contar", { uid: user.id });
+    if (used.error) return json({ error: "servidor" }, 500);
+    if (Number(used.data) > LIMITE) return json({ error: "limite", limite: LIMITE }, 429);
+
+    const now = (body.actual ?? {}) as Record<string, unknown>;
+    const pick = (v: unknown, ok: string[]) => (typeof v === "string" && ok.includes(v) ? v : "");
+    const actual = {
+      color: pick(now.accent, [...accents.map((o) => o.k), "custom"]) || "(sin elegir)",
+      colorPropio: HEX.test(String(now.accentHex ?? "")) ? String(now.accentHex) : "",
+      tipografia: pick(now.font, fonts.map((o) => o.k)) || "(sin elegir)",
+      fondo: pick(now.bgTheme, bgs.map((o) => o.k)) || "(sin elegir)",
+      tamanoTexto: now.size === "grande" ? "grande" : "normal",
+      rayitas: now.tally !== false,
+      fraseDelDia: now.quotes !== false,
+      idiomaFrases: now.quoteLang === "en" ? "en" : "es",
+    };
+
+    const system = `Eres el asistente de personalización de JLG Habits, una app personal de hábitos con estilo minimalista, oscuro y enfocado en disciplina ("grind").
+Tu único trabajo es ayudar a la persona a dejar la app a su gusto: color de acento, fondo, tipografía, tamaño del texto, rayitas de racha, frase del día y su idioma.
+Si te piden otra cosa (crear hábitos, dudas generales, temas ajenos a la app), dilo en una frase y regresa a la personalización.
+
+Reglas:
+- Responde siempre con la herramienta "responder". El mensaje va en español, salvo que la persona escriba en inglés.
+- Mensajes cortos: 1 a 3 frases, tono directo y cercano, sin emojis.
+- Cuando la petición sea clara, propón cambios de inmediato y explica en pocas palabras por qué combinan. Si es vaga, propón una opción concreta y ofrece una alternativa; pregunta solo si de verdad no hay forma de adivinar.
+- Cambia solo lo que haga falta. No repitas un valor que ya está puesto.
+- Los cambios se muestran en vista previa: no digas que ya quedaron guardados. La persona confirma con el botón "quedármelo" o los quita con "deshacer".
+- Usa solo claves del catálogo. Para un color que no exista en la paleta usa color = "custom" y colorPropio con un hex; la app lo aclara si es muy oscuro.
+- Todos los fondos son oscuros. Para buena lectura, evita combinar un fondo con un color de acento casi del mismo tono.
+- Tonos de cada color, de menos a más intenso: -0 claro, -1 medio, -2 intenso, -3 profundo.
+
+Configuración actual:
+${JSON.stringify(actual)}
+
+Colores (clave = nombre hex):
+${list(accents)}
+
+Fondos (clave = nombre):
+${list(bgs)}
+
+Tipografías (clave = nombre):
+${list(fonts)}`;
+
+    const tool = {
+      name: "responder",
+      description: "Mensaje para la persona y, si aplica, los ajustes de personalización que propones.",
+      input_schema: {
+        type: "object",
+        properties: {
+          mensaje: { type: "string", description: "Respuesta corta para la persona." },
+          cambios: {
+            type: "object",
+            description: "Solo los ajustes que cambian. Omite lo que se queda igual.",
+            properties: {
+              color: { type: "string", enum: [...accents.map((o) => o.k), "custom"] },
+              colorPropio: { type: "string", description: "Hex #rrggbb, solo si color es custom." },
+              fondo: { type: "string", enum: bgs.map((o) => o.k) },
+              tipografia: { type: "string", enum: fonts.map((o) => o.k) },
+              tamanoTexto: { type: "string", enum: ["normal", "grande"] },
+              rayitas: { type: "boolean", description: "true: rayitas y número; false: solo número." },
+              fraseDelDia: { type: "boolean" },
+              idiomaFrases: { type: "string", enum: ["es", "en"] },
+            },
+          },
+        },
+        required: ["mensaje"],
+      },
+    };
+
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: MODEL, max_tokens: 600, system, tools: [tool], tool_choice: { type: "tool", name: "responder" }, messages: msgs }),
+    });
+    if (!r.ok) {
+      const detail = (await r.text()).slice(0, 300);
+      console.error("anthropic", r.status, detail);
+      return json({ error: r.status === 401 ? "llave" : r.status === 429 || r.status === 529 ? "ocupado" : r.status === 400 && /credit/i.test(detail) ? "saldo" : "modelo" }, 502);
+    }
+    const out = await r.json();
+    const use = (out.content || []).find((b: { type: string }) => b.type === "tool_use");
+    const input = (use?.input ?? {}) as Record<string, unknown>;
+    const mensaje = typeof input.mensaje === "string" ? input.mensaje.slice(0, 800) : "";
+    const c = (input.cambios ?? {}) as Record<string, unknown>;
+
+    // Traduce al formato del perfil de la app y descarta lo que no sea válido.
+    const cambios: Record<string, unknown> = {};
+    if (c.color === "custom" && HEX.test(String(c.colorPropio ?? ""))) { cambios.accent = "custom"; cambios.accentHex = String(c.colorPropio).toLowerCase(); }
+    else if (typeof c.color === "string" && accents.some((o) => o.k === c.color)) cambios.accent = c.color;
+    if (typeof c.fondo === "string" && bgs.some((o) => o.k === c.fondo)) cambios.bgTheme = c.fondo;
+    if (typeof c.tipografia === "string" && fonts.some((o) => o.k === c.tipografia)) cambios.font = c.tipografia;
+    if (c.tamanoTexto === "normal" || c.tamanoTexto === "grande") cambios.size = c.tamanoTexto;
+    if (typeof c.rayitas === "boolean") cambios.tally = c.rayitas;
+    if (typeof c.fraseDelDia === "boolean") cambios.quotes = c.fraseDelDia;
+    if (c.idiomaFrases === "es" || c.idiomaFrases === "en") cambios.quoteLang = c.idiomaFrases;
+
+    return json({ mensaje: mensaje || "Listo, te dejo la propuesta en vista previa.", cambios, restantes: Math.max(0, LIMITE - Number(used.data)) });
+  } catch (e) {
+    console.error(e);
+    return json({ error: "servidor" }, 500);
+  }
+});

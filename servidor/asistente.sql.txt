@@ -1,0 +1,20 @@
+-- JLG Habits: contador diario del asistente de personalización (evita gastos por uso excesivo).
+create table if not exists public.asistente_uso (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  dia date not null,
+  n int not null default 0,
+  primary key (user_id, dia)
+);
+alter table public.asistente_uso enable row level security;
+revoke all on public.asistente_uso from anon, authenticated;
+
+-- Suma un uso y devuelve cuántos lleva el usuario hoy (hora de la Ciudad de México).
+create or replace function public.asistente_contar(uid uuid) returns int
+language sql security definer set search_path = '' as $$
+  insert into public.asistente_uso (user_id, dia, n)
+  values (uid, (now() at time zone 'America/Mexico_City')::date, 1)
+  on conflict (user_id, dia) do update set n = public.asistente_uso.n + 1
+  returning n;
+$$;
+revoke all on function public.asistente_contar(uuid) from public, anon, authenticated;
+grant execute on function public.asistente_contar(uuid) to service_role;
