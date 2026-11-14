@@ -228,6 +228,8 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
 .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
 .prow2{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
+.bgchip{display:inline-flex;align-items:center;gap:8px}
+.bgchip i{width:16px;height:16px;border-radius:50%;border:1px solid;flex:none}
 .pgroup{grid-column:1/-1;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.2em;text-transform:lowercase;color:var(--ink)}
 .pgroup:first-child{margin-top:0;padding-top:0;border-top:0}
 .prow2.own{grid-column:1/-1;cursor:pointer;flex-direction:row;align-items:center;flex-wrap:nowrap;justify-content:flex-start;gap:10px;margin:0;padding:0;text-align:left}
@@ -421,7 +423,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.24";
+var VERSION = "1.25";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -673,11 +675,24 @@ var BGS = {
   negro:{bg:"#000000", surface:"#0e0e0d", raise:"#1a1917", line:"#292724"},
   carbon:{bg:"#17181a", surface:"#1f2023", raise:"#2a2b2f", line:"#36383c"},
   espresso:{bg:"#14100c", surface:"#1d1813", raise:"#28211a", line:"#352c22"},
-  pizarra:{bg:"#101418", surface:"#181d22", raise:"#22282e", line:"#2e353c"}
+  pizarra:{bg:"#101418", surface:"#181d22", raise:"#22282e", line:"#2e353c"},
+  grafito:{label:"grafito", bg:"#161718", surface:"#202122", raise:"#2d2d2f", line:"#393a3c"},
+  tinta:{label:"tinta", bg:"#0b0d14", surface:"#131620", raise:"#1e212f", line:"#292d3d"},
+  medianoche:{label:"medianoche", bg:"#0c111d", surface:"#141a2a", raise:"#1e2639", line:"#293247"},
+  marino:{label:"marino", bg:"#0b151e", surface:"#131f2a", raise:"#1d2c3a", line:"#283949"},
+  indigo:{label:"índigo", bg:"#110f1f", surface:"#1a172b", raise:"#26223a", line:"#322d48"},
+  ciruela:{label:"ciruela", bg:"#170e1b", surface:"#231726", raise:"#302235", line:"#3e2d43"},
+  vino:{label:"vino", bg:"#1c0d11", surface:"#28151a", raise:"#372025", line:"#452b32"},
+  cacao:{label:"cacao", bg:"#1b120d", surface:"#271b16", raise:"#362720", line:"#44332c"},
+  musgo:{label:"musgo", bg:"#14160d", surface:"#1f2216", raise:"#2d3121", line:"#3a3f2d"},
+  bosque:{label:"bosque", bg:"#0c1812", surface:"#14241c", raise:"#1f3329", line:"#2a4136"},
+  petroleo:{label:"petróleo", bg:"#0b1819", surface:"#132426", raise:"#1d3335", line:"#284143"}
 };
+var BG_LABELS = {calido:"negro cálido", negro:"negro puro", carbon:"carbón", espresso:"espresso", pizarra:"pizarra"};
 function bgKey(){ var b=S.profile && S.profile.bgTheme; return BGS[b] ? b : "calido"; }
 function applyLook(){
   var bgT=BGS[bgKey()], rs=document.documentElement.style;
+  try{ document.querySelector('meta[name="theme-color"]').setAttribute("content", bgT.bg); }catch(e){}
   rs.setProperty("--bg",bgT.bg); rs.setProperty("--surface",bgT.surface); rs.setProperty("--raise",bgT.raise); rs.setProperty("--line",bgT.line);
   app.style.zoom = (S.profile && S.profile.size==="grande") ? "1.12" : "";
   var r=document.documentElement.style, ac=ACCENTS[accentKey()];
@@ -915,7 +930,7 @@ function viewPers(){
   h += '</div></div><div class="setrow"><span>Frase del día</span><div class="tools"><button class="chip'+((S.profile||{}).quotes!==false?' on':'')+'" data-a="quotes" aria-pressed="'+((S.profile||{}).quotes!==false)+'">'+((S.profile||{}).quotes!==false?'visible':'oculta')+'</button></div></div></div>';
   h += '<div class="card"><h3>frases</h3><div class="setrow"><span>Idioma de las frases</span><div class="tools">'+opt("quoteLang","es","español",pf.quoteLang==="en"?"en":"es")+opt("quoteLang","en","english",pf.quoteLang==="en"?"en":"es")+'</div></div></div>';
   h += '<div class="card"><h3>pantalla</h3>'
-    + '<div class="setrow"><span>Fondo</span><div class="tools">'+opt("bgTheme","calido","negro cálido",bgKey())+opt("bgTheme","negro","negro puro",bgKey())+opt("bgTheme","carbon","carbón",bgKey())+opt("bgTheme","espresso","espresso",bgKey())+opt("bgTheme","pizarra","pizarra",bgKey())+'</div></div>'
+    + '<div class="setrow"><span>Fondo · '+esc(BG_LABELS[bgKey()]||BGS[bgKey()].label)+'</span><div class="tools">'+Object.keys(BGS).map(function(k){ return '<button class="chip bgchip'+(bgKey()===k?' on':'')+'" data-a="set" data-k="bgTheme" data-v="'+k+'" aria-pressed="'+(bgKey()===k)+'"><i style="background:linear-gradient(135deg,'+BGS[k].line+' 50%,'+BGS[k].bg+' 50%);border-color:'+BGS[k].line+'"></i>'+esc(BG_LABELS[k]||BGS[k].label)+'</button>'; }).join("")+'</div></div>'
     + '<div class="setrow"><span>Tamaño del texto</span><div class="tools">'+opt("size","normal","normal",pf.size==="grande"?"grande":"normal")+opt("size","grande","grande",pf.size==="grande"?"grande":"normal")+'</div></div>'
     + '<div class="setrow"><span>Rachas en las tarjetas</span><div class="tools">'+opt("tally","true","rayitas y número",String(pf.tally!==false))+opt("tally","false","solo número",String(pf.tally!==false))+'</div></div></div>';
   return h;
