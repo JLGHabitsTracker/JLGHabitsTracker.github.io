@@ -227,8 +227,16 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .wkrow i.fut{box-shadow:inset 0 0 0 1px var(--line)}
 .wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
 .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
-.prow2{display:flex;align-items:center;gap:2px}
-.pname{flex:1;font-size:13px;color:var(--muted);text-transform:lowercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow2{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
+.pgroup{grid-column:1/-1;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.2em;text-transform:lowercase;color:var(--ink)}
+.pgroup:first-child{margin-top:0;padding-top:0;border-top:0}
+.prow2.own{grid-column:1/-1;cursor:pointer;flex-direction:row;align-items:center;flex-wrap:nowrap;justify-content:flex-start;gap:10px;margin:0;padding:0;text-align:left}
+.prow2.own .pname{flex:0 1 auto;order:2}
+.prow2.own .sw{flex:none}
+.prow2.own .sw{position:relative;display:block}
+.prow2.own .sw>span{display:block;width:100%;height:100%;border-radius:50%}
+.prow2.own input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;cursor:pointer}
+.pname{flex:0 0 100%;font-size:13px;color:var(--muted);text-transform:lowercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sw.sm{width:30px;height:30px;padding:3px}
 [hidden]{display:none!important}
 @media (max-width:380px){h1{font-size:36px}.state{font-size:17px}.ico{width:46px;height:46px}.orb{width:52px;height:52px}}
@@ -413,7 +421,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.23";
+var VERSION = "1.24";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -643,10 +651,23 @@ var ACCENTS = {
   niebla:{label:"niebla", a:"#aebccb", d:"#56606b"}
 };
 function fontKey(){ var f=S.profile && S.profile.font; return FONTS[f] ? f : "serif"; }
-var PALETTE = [{"k": "oro", "l": "oro", "t": [["#eaddc2", "#675532"], ["#e3ca96", "#6c572d"], ["#d8b56e", "#614e29"], ["#cea046", "#614e29"]]}, {"k": "arena", "l": "arena", "t": [["#e2d9ca", "#5c503d"], ["#d3c1a6", "#5f503a"], ["#c2a984", "#554834"], ["#b29262", "#554834"]]}, {"k": "hueso", "l": "hueso", "t": [["#dad7d2", "#524e47"], ["#c5bfb5", "#534e46"], ["#aea698", "#4b463f"], ["#988d7c", "#4b463f"]]}, {"k": "plata", "l": "plata", "t": [["#d4d6d8", "#4a4c4f"], ["#b9bcc1", "#494c50"], ["#9ea2a9", "#424448"], ["#838991", "#424448"]]}, {"k": "piedra", "l": "piedra", "t": [["#d9d6d3", "#504c49"], ["#c2bdb7", "#514c48"], ["#aba39c", "#494541"], ["#938a80", "#494541"]]}, {"k": "arcilla", "l": "arcilla", "t": [["#e5d2c8", "#604739"], ["#d9b5a1", "#634736"], ["#ca997d", "#593f31"], ["#bb7d58", "#593f31"]]}, {"k": "coral", "l": "coral", "t": [["#ecc7c1", "#693930"], ["#e6a094", "#6e352b"], ["#dc7b6a", "#633027"], ["#d25741", "#633027"]]}, {"k": "rosa", "l": "rosa", "t": [["#e5c8cf", "#603943"], ["#d9a1af", "#633641"], ["#ca7d90", "#59313b"], ["#bb5871", "#59313b"]]}, {"k": "vino", "l": "vino", "t": [["#e3cace", "#5d3c42"], ["#d5a5ad", "#603940"], ["#c4828d", "#563339"], ["#b45f6e", "#563339"]]}, {"k": "oliva", "l": "oliva", "t": [["#deddcf", "#575642"], ["#cbcaae", "#585741"], ["#b7b68f", "#4f4f3a"], ["#a4a270", "#4f4f3a"]]}, {"k": "salvia", "l": "salvia", "t": [["#d2decf", "#475742"], ["#b5cbae", "#475841"], ["#99b78f", "#404f3a"], ["#7da470", "#404f3a"]]}, {"k": "menta", "l": "menta", "t": [["#cce1d8", "#3f5a4f"], ["#a9d1c0", "#3c5d4f"], ["#88bfa8", "#365347"], ["#67ad90", "#365347"]]}, {"k": "petroleo", "l": "petróleo", "t": [["#cbdfe1", "#3e595b"], ["#a7ced2", "#3b5b5e"], ["#86bcc1", "#355254"], ["#64a9af", "#355254"]]}, {"k": "niebla", "l": "niebla", "t": [["#ced6df", "#424c57"], ["#adbdcd", "#404c59"], ["#8da3b9", "#394550"], ["#6e8aa6", "#394550"]]}, {"k": "cobalto", "l": "cobalto", "t": [["#c1cbec", "#303d69"], ["#94a7e6", "#2b3b6e"], ["#6a85dc", "#273563"], ["#4163d2", "#273563"]]}, {"k": "lavanda", "l": "lavanda", "t": [["#d3c9e3", "#483b5e"], ["#b6a4d6", "#473861"], ["#9a80c6", "#403357"], ["#7e5db6", "#403357"]]}];
+var PALETTE = [{"k": "oro", "l": "oro", "t": [["#eaddc2", "#675532"], ["#e3ca96", "#6c572d"], ["#d8b56e", "#614e29"], ["#cea046", "#614e29"]], "g": "neutros"}, {"k": "arena", "l": "arena", "t": [["#e2d9ca", "#5c503d"], ["#d3c1a6", "#5f503a"], ["#c2a984", "#554834"], ["#b29262", "#554834"]], "g": "neutros"}, {"k": "hueso", "l": "hueso", "t": [["#dad7d2", "#524e47"], ["#c5bfb5", "#534e46"], ["#aea698", "#4b463f"], ["#988d7c", "#4b463f"]], "g": "neutros"}, {"k": "plata", "l": "plata", "t": [["#d4d6d8", "#4a4c4f"], ["#b9bcc1", "#494c50"], ["#9ea2a9", "#424448"], ["#838991", "#424448"]], "g": "neutros"}, {"k": "piedra", "l": "piedra", "t": [["#d9d6d3", "#504c49"], ["#c2bdb7", "#514c48"], ["#aba39c", "#494541"], ["#938a80", "#494541"]], "g": "neutros"}, {"k": "limon", "l": "limón", "t": [["#efe7bd", "#6e632b"], ["#ecdd8d", "#736626"], ["#e5cf61", "#685c22"], ["#dec235", "#685c22"]], "g": "cálidos"}, {"k": "ambar", "l": "ámbar", "t": [["#f3d7ba", "#724e27"], ["#f3bf86", "#784e21"], ["#eea658", "#6c461d"], ["#ea8d2a", "#6c461d"]], "g": "cálidos"}, {"k": "mandarina", "l": "mandarina", "t": [["#f2cdba", "#714028"], ["#f2ab88", "#773e22"], ["#ed8b5a", "#6b381e"], ["#e86a2c", "#6b381e"]], "g": "cálidos"}, {"k": "arcilla", "l": "arcilla", "t": [["#e5d2c8", "#604739"], ["#d9b5a1", "#634736"], ["#ca997d", "#593f31"], ["#bb7d58", "#593f31"]], "g": "cálidos"}, {"k": "coral", "l": "coral", "t": [["#ecc7c1", "#693930"], ["#e6a094", "#6e352b"], ["#dc7b6a", "#633027"], ["#d25741", "#633027"]], "g": "cálidos"}, {"k": "carmesi", "l": "carmesí", "t": [["#eebfc2", "#6c2d31"], ["#ea9096", "#71282d"], ["#e2656d", "#662428"], ["#d93a45", "#662428"]], "g": "cálidos"}, {"k": "rosa", "l": "rosa", "t": [["#e5c8cf", "#603943"], ["#d9a1af", "#633641"], ["#ca7d90", "#59313b"], ["#bb5871", "#59313b"]], "g": "cálidos"}, {"k": "vino", "l": "vino", "t": [["#e3cace", "#5d3c42"], ["#d5a5ad", "#603940"], ["#c4828d", "#563339"], ["#b45f6e", "#563339"]], "g": "cálidos"}, {"k": "fucsia", "l": "fucsia", "t": [["#ecc1d8", "#69304e"], ["#e694bf", "#6e2b4f"], ["#dc6aa7", "#632747"], ["#d2418f", "#632747"]], "g": "cálidos"}, {"k": "orquidea", "l": "orquídea", "t": [["#e5c8e5", "#603960"], ["#d9a1d9", "#633663"], ["#ca7dca", "#593159"], ["#bb58bb", "#593159"]], "g": "cálidos"}, {"k": "oliva", "l": "oliva", "t": [["#deddcf", "#575642"], ["#cbcaae", "#585741"], ["#b7b68f", "#4f4f3a"], ["#a4a270", "#4f4f3a"]], "g": "verdes"}, {"k": "lima", "l": "lima", "t": [["#dde8c5", "#566336"], ["#cade9c", "#576732"], ["#b6d175", "#4e5d2d"], ["#a1c44f", "#4e5d2d"]], "g": "verdes"}, {"k": "salvia", "l": "salvia", "t": [["#d2decf", "#475742"], ["#b5cbae", "#475841"], ["#99b78f", "#404f3a"], ["#7da470", "#404f3a"]], "g": "verdes"}, {"k": "bosque", "l": "bosque", "t": [["#cae2ce", "#3d5c41"], ["#a6d3ac", "#3a5f3f"], ["#84c28c", "#345539"], ["#62b26c", "#345539"]], "g": "verdes"}, {"k": "esmeralda", "l": "esmeralda", "t": [["#c4e8d4", "#356449"], ["#9adfb8", "#316849"], ["#73d39d", "#2c5e42"], ["#4dc782", "#2c5e42"]], "g": "verdes"}, {"k": "menta", "l": "menta", "t": [["#cce1d8", "#3f5a4f"], ["#a9d1c0", "#3c5d4f"], ["#88bfa8", "#365347"], ["#67ad90", "#365347"]], "g": "verdes"}, {"k": "jade", "l": "jade", "t": [["#c4e8e1", "#35645b"], ["#9adfd1", "#31685d"], ["#73d3c0", "#2c5e54"], ["#4dc7ae", "#2c5e54"]], "g": "verdes"}, {"k": "petroleo", "l": "petróleo", "t": [["#cbdfe1", "#3e595b"], ["#a7ced2", "#3b5b5e"], ["#86bcc1", "#355254"], ["#64a9af", "#355254"]], "g": "fríos"}, {"k": "turquesa", "l": "turquesa", "t": [["#c3e9ea", "#336566"], ["#98e1e2", "#2f696a"], ["#70d5d7", "#2a5f60"], ["#48c9cb", "#2a5f60"]], "g": "fríos"}, {"k": "cielo", "l": "cielo", "t": [["#bfdfed", "#2e596b"], ["#91cee8", "#295b70"], ["#67bbe0", "#255265"], ["#3ca9d7", "#255265"]], "g": "fríos"}, {"k": "niebla", "l": "niebla", "t": [["#ced6df", "#424c57"], ["#adbdcd", "#404c59"], ["#8da3b9", "#394550"], ["#6e8aa6", "#394550"]], "g": "fríos"}, {"k": "azul", "l": "azul", "t": [["#bdd5ef", "#2b4b6e"], ["#8dbbec", "#264b73"], ["#61a1e5", "#224468"], ["#3587de", "#224468"]], "g": "fríos"}, {"k": "cobalto", "l": "cobalto", "t": [["#c1cbec", "#303d69"], ["#94a7e6", "#2b3b6e"], ["#6a85dc", "#273563"], ["#4163d2", "#273563"]], "g": "fríos"}, {"k": "indigo", "l": "índigo", "t": [["#c4c1ec", "#343069"], ["#9994e6", "#302b6e"], ["#726adc", "#2b2763"], ["#4b41d2", "#2b2763"]], "g": "fríos"}, {"k": "violeta", "l": "violeta", "t": [["#dac2ea", "#523267"], ["#c496e3", "#532d6c"], ["#ae6ed8", "#4a2961"], ["#9746ce", "#4a2961"]], "g": "fríos"}, {"k": "lavanda", "l": "lavanda", "t": [["#d3c9e3", "#483b5e"], ["#b6a4d6", "#473861"], ["#9a80c6", "#403357"], ["#7e5db6", "#403357"]], "g": "fríos"}];
 var TONES = ["claro","medio","intenso","profundo"];
 PALETTE.forEach(function(f){ f.t.forEach(function(t,i){ ACCENTS[f.k+"-"+i] = {label:f.l+" "+TONES[i], a:t[0], d:t[1]}; }); });
-function accentKey(){ var a=S.profile && S.profile.accent; return ACCENTS[a] ? a : "dorado"; }
+/* Own colour: any hex the person picks, lifted to a readable lightness on the dark background. */
+function ownAccent(hex){
+  if(!/^#[0-9a-f]{6}$/i.test(hex||"")) return null;
+  var r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  var mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2, d=mx-mn, h=0, sa=0;
+  if(d){ sa = d/(1-Math.abs(2*l-1)); h = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h = (h*60+360)%360; }
+  var css=function(S2,L2){ return "hsl("+Math.round(h)+" "+Math.round(S2*100)+"% "+Math.round(L2*100)+"%)"; };
+  return {label:"propio", a:css(sa, Math.min(.86, Math.max(.52, l))), d:css(sa*.7, .28)};
+}
+function accentKey(){
+  var a=S.profile && S.profile.accent;
+  if(a==="custom"){ var c=ownAccent(S.profile.accentHex); if(c){ ACCENTS.custom=c; return "custom"; } }
+  return ACCENTS[a] && a!=="custom" ? a : "dorado";
+}
 var BGS = {
   calido:{bg:"#11100e", surface:"#1a1815", raise:"#25221c", line:"#322d25"},
   negro:{bg:"#000000", surface:"#0e0e0d", raise:"#1a1917", line:"#292724"},
@@ -877,11 +898,15 @@ function viewPers(){
   var h = notes()+'<div><button class="chip" data-a="go" data-v="ajustes">‹ editar perfil</button></div><div><p class="eyebrow">a tu gusto</p><h1>personalizar</h1></div>';
   var cur=accentKey();
   h += '<div class="card"><h3>apariencia</h3><div class="setrow"><span>Color · '+esc(ACCENTS[cur].label)+'</span><div class="palette">';
+  var grp="";
   PALETTE.forEach(function(f){
+    if(f.g!==grp){ grp=f.g; h += '<p class="pgroup">'+esc(grp)+'</p>'; }
     h += '<div class="prow2"><span class="pname">'+esc(f.l)+'</span>';
     f.t.forEach(function(t,i){ var key=f.k+"-"+i; h += '<button class="sw sm'+(cur===key?' on':'')+'" data-a="accent" data-v="'+key+'" aria-label="'+esc(f.l+' '+TONES[i])+'" aria-pressed="'+(cur===key)+'"><span style="background:'+t[0]+'"></span></button>'; });
     h += '</div>';
   });
+  var own=/^#[0-9a-f]{6}$/i.test(pf.accentHex||"") ? pf.accentHex : "#d9b97c";
+  h += '<p class="pgroup">tu color</p><label class="prow2 own"><span class="pname">elige cualquier color</span><span class="sw sm'+(cur==="custom"?' on':'')+'"><span style="background:'+(cur==="custom"?ACCENTS.custom.a:esc(own))+'"></span><input type="color" id="own-color" value="'+esc(own)+'" aria-label="Elegir un color propio"></span></label>';
   h += '</div></div><div class="setrow"><span>Tipografía</span><div class="tools">';
   Object.keys(FONTS).forEach(jlgFont);
   Object.keys(FONTS).forEach(function(f){
@@ -943,6 +968,7 @@ function syncType(){
   $("hf-daysbox").hidden = w;
 }
 $("hf-type").addEventListener("change", syncType);
+document.addEventListener("change", function(e){ if(e.target && e.target.id==="own-color"){ setProfile({accent:"custom", accentHex:e.target.value}); render(); } });
 $("hf-name").addEventListener("input", function(){ if(!editing && !document.querySelector('input[name="hf-icon"]:checked.user')) pickIcon(guessIcon(this.value)); });
 $("hf-icons").addEventListener("change", function(e){ document.querySelectorAll('input[name="hf-icon"]').forEach(function(r){ r.classList.remove("user"); }); e.target.classList.add("user"); });
 function openHabit(h){
