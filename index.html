@@ -228,6 +228,9 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
 .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
 .prow2{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
+.how{margin:4px 0}
+.how summary{cursor:pointer;color:var(--accent);font-size:14px;padding:6px 0}
+.how ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
 .bgchip{display:inline-flex;align-items:center;gap:8px}
 .bgchip i{width:16px;height:16px;border-radius:50%;border:1px solid;flex:none}
 .pgroup{grid-column:1/-1;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:12px;letter-spacing:.2em;text-transform:lowercase;color:var(--ink)}
@@ -423,7 +426,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.25";
+var VERSION = "1.26";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -944,6 +947,7 @@ function viewAjustes(){
     else if(!user) h += '<p class="small">Crea tu cuenta o inicia sesión para tener tus datos en el iPhone, la compu y donde quieras, sin pasar respaldos.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div>';
     else h += '<p class="small">Sesión iniciada como <b>'+esc(user.email||"")+'</b>.</p><p class="small">'+esc(syncLabel())+'</p><div class="tools"><button class="ghost" data-a="sync-now">sincronizar ahora</button><button class="danger" data-a="logout">cerrar sesión</button></div>';
     h += '</div>';
+    if(sb && user) h += atajoCard();
   }
   h += '<div class="card"><div class="row"><div class="hname"><h3>personalizar</h3><em class="sub">color, fondo, tipografía y más</em></div><button class="ghost" data-a="go" data-v="personalizar">abrir</button></div></div>';
   return h;
@@ -1301,11 +1305,66 @@ function startSync(){
     else processParams();
   });
   sb.auth.onAuthStateChange(function(ev, session){
-    if(ev==="SIGNED_OUT"){ user=null; render(); }
+    if(ev==="SIGNED_OUT"){ user=null; AT={loaded:false, busy:false, token:"", last:"", err:"", msg:""}; render(); }
     else if(session && session.user){ user = session.user; }
   });
   document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") syncNow(true); });
   window.addEventListener("online", function(){ syncNow(true); });
+  setInterval(function(){ if(document.visibilityState==="visible" && user && !document.querySelector("dialog[open]")) syncNow(true); }, 180000);
+}
+/* ---------- steps from the iPhone shortcut, straight to the cloud ---------- */
+var AT = {loaded:false, busy:false, token:"", last:"", err:"", msg:""};
+var AT_URL = SB_URL+"/rest/v1/rpc/atajo";
+function loadAtajo(){
+  if(!sb || !user || AT.loaded || AT.busy) return;
+  AT.busy = true;
+  sb.from("atajo_tokens").select("token,last_used").eq("user_id", user.id).maybeSingle().then(function(r){
+    AT.busy=false; AT.loaded=true;
+    if(r.error){ AT.err="No se pudo consultar la nube. Revisa tu internet y vuelve a entrar."; }
+    else{ AT.err=""; AT.token=(r.data && r.data.token)||""; AT.last=(r.data && r.data.last_used)||""; }
+    if(S.view==="ajustes" && !document.querySelector("dialog[open]")) render();
+  }, function(){ AT.busy=false; AT.loaded=true; AT.err="No se pudo consultar la nube. Revisa tu internet y vuelve a entrar."; if(S.view==="ajustes") render(); });
+}
+function newAtajo(){
+  var a=new Uint8Array(24), t=""; crypto.getRandomValues(a);
+  for(var i=0;i<a.length;i++) t += ("0"+a[i].toString(16)).slice(-2);
+  AT.msg="Creando tu llave…"; render();
+  sb.from("atajo_tokens").upsert({user_id:user.id, token:t, last_used:null}).then(function(r){
+    if(r.error){ AT.msg="No se pudo crear la llave. Intenta de nuevo."; }
+    else{ AT.token=t; AT.last=""; AT.msg="Llave lista. Pégala en tu atajo."; }
+    render();
+  });
+}
+function copyText(t, okMsg){
+  var done=function(){ AT.msg=okMsg; render(); }, fail=function(){ AT.msg="No se pudo copiar; mantén presionado el texto y cópialo a mano."; render(); };
+  try{ navigator.clipboard.writeText(t).then(done, fail); }catch(e){ fail(); }
+}
+function atajoCard(){
+  loadAtajo();
+  var h = '<div class="card"><h3>pasos automáticos</h3>';
+  if(!AT.loaded){ return h+'<p class="small">Consultando…</p></div>'; }
+  if(AT.err){ return h+'<p class="small">'+esc(AT.err)+'</p></div>'; }
+  if(!AT.token){
+    h += '<p class="small">Un atajo del iPhone lee tus pasos de Salud y los manda a tu cuenta sin abrir la app. Al entrar aquí ya aparecen actualizados.</p>'
+      + '<div class="tools"><button class="primary" data-a="atajo-new">activar</button></div>';
+  }else{
+    var last = AT.last ? new Date(AT.last).toLocaleString("es-MX",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}) : "";
+    h += '<p class="small">'+(last ? 'Último envío del atajo: <b>'+esc(last)+'</b>.' : 'Tu llave está lista; el atajo todavía no ha mandado nada.')+'</p>'
+      + '<label>Dirección<input readonly value="'+esc(AT_URL)+'" onfocus="this.select()"></label>'
+      + '<label>apikey<input readonly value="'+esc(SB_KEY)+'" onfocus="this.select()"></label>'
+      + '<label>token (tu llave secreta)<input readonly value="'+esc(AT.token)+'" onfocus="this.select()"></label>'
+      + '<div class="tools"><button class="ghost" data-a="atajo-copy" data-v="url">copiar dirección</button><button class="ghost" data-a="atajo-copy" data-v="key">copiar apikey</button><button class="ghost" data-a="atajo-copy" data-v="token">copiar token</button></div>'
+      + '<details class="how"><summary>cómo armar el atajo</summary><ol class="small">'
+      + '<li>En Atajos, crea un atajo nuevo: <b>Buscar muestras de Salud</b> (tipo Pasos, fecha de inicio es hoy).</li>'
+      + '<li><b>Calcular estadísticas</b>: Suma.</li>'
+      + '<li><b>Obtener contenido de URL</b>: pega la dirección. Método <b>POST</b>. En Encabezados agrega <b>apikey</b> con el valor de arriba. Cuerpo de la solicitud <b>JSON</b> con dos campos: <b>token</b> (texto, tu llave) y <b>pasos</b> (número, la variable Estadísticas).</li>'
+      + '<li>En Automatización, crea varias de <b>Hora del día</b> (por ejemplo 9 am, 1 pm, 6 pm y 10 pm), con <b>Ejecutar de inmediato</b>, que corran ese atajo.</li>'
+      + '<li>Para otra métrica, agrega otro campo con el nombre del hábito, igual que en la app (por ejemplo <b>agua</b>).</li>'
+      + '</ol></details>'
+      + '<div class="tools"><button class="ghost" data-a="atajo-refresh">revisar último envío</button><button class="danger" data-a="atajo-new">cambiar llave</button></div>';
+  }
+  if(AT.msg) h += '<p class="small">'+esc(AT.msg)+'</p>';
+  return h+'</div>';
 }
 /* login dialog */
 function openLogin(){
@@ -1590,6 +1649,9 @@ document.addEventListener("click", function(ev){
   else if(a==="go"){ location.hash = el.dataset.v; window.scrollTo(0,0); }
   else if(a==="set"){ var o={}, sv=el.dataset.v; o[el.dataset.k] = sv==="true" ? true : sv==="false" ? false : sv; setProfile(o); render(); }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
+  else if(a==="atajo-new"){ newAtajo(); }
+  else if(a==="atajo-copy"){ var w=el.dataset.v; copyText(w==="url"?AT_URL:w==="key"?SB_KEY:AT.token, w==="url"?"Dirección copiada.":w==="key"?"apikey copiada.":"Token copiado."); }
+  else if(a==="atajo-refresh"){ AT.loaded=false; AT.msg=""; syncNow(true); render(); }
   else if(a==="accent"){ setProfile({accent:el.dataset.v}); render(); }
   else if(a==="snooze-backup"){ setProfile({backupSnooze:today()}); render(); }
   else if(a==="share-backup"){ shareBackup(); }

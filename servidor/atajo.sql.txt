@@ -1,0 +1,60 @@
+-- JLG Habits: el Atajo del iPhone manda pasos (y otras métricas) directo a la nube, sin abrir la app.
+-- Cada cuenta tiene una llave larga y secreta; quien la tenga solo puede registrar valores, nunca leer datos.
+create table if not exists public.atajo_tokens (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  token text unique not null check (length(token) >= 40),
+  created_at timestamptz not null default now(),
+  last_used timestamptz
+);
+alter table public.atajo_tokens enable row level security;
+drop policy if exists "mi llave ver" on public.atajo_tokens;
+drop policy if exists "mi llave crear" on public.atajo_tokens;
+drop policy if exists "mi llave cambiar" on public.atajo_tokens;
+drop policy if exists "mi llave borrar" on public.atajo_tokens;
+create policy "mi llave ver" on public.atajo_tokens for select to authenticated using ((select auth.uid()) = user_id);
+create policy "mi llave crear" on public.atajo_tokens for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "mi llave cambiar" on public.atajo_tokens for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "mi llave borrar" on public.atajo_tokens for delete to authenticated using ((select auth.uid()) = user_id);
+revoke all on public.atajo_tokens from anon;
+grant select, insert, update, delete on public.atajo_tokens to authenticated;
+
+-- Recibe el cuerpo completo de la petición: {"token":"…","pasos":8123,"agua":2}
+create or replace function public.atajo(jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare
+  body alias for $1;
+  uid uuid; hs jsonb; pf jsonb; tz text; d date; k text; raw text; val numeric; h jsonb; w text;
+  patch jsonb := '{}'::jsonb; names text[] := '{}';
+  acc constant text := 'áéíóúüñ'; pla constant text := 'aeiouun';
+begin
+  if body is null or jsonb_typeof(body) <> 'object' or length(coalesce(body->>'token','')) < 40 then
+    return jsonb_build_object('ok', false, 'error', 'llave');
+  end if;
+  select t.user_id into uid from public.atajo_tokens t where t.token = body->>'token';
+  if uid is null then return jsonb_build_object('ok', false, 'error', 'llave'); end if;
+  select c.habits, c.profile into hs, pf from public.user_config c where c.user_id = uid;
+  tz := coalesce(nullif(pf->>'tz',''), 'America/Mexico_City');
+  begin d := (now() at time zone tz)::date; exception when others then d := (now() at time zone 'America/Mexico_City')::date; end;
+  for k, raw in select e.key, e.value from jsonb_each_text(body) e where e.key <> 'token' loop
+    begin val := round(substring(replace(replace(raw, ',', ''), ' ', '') from '[0-9]+(?:\.[0-9]+)?')::numeric, 2); exception when others then continue; end;
+    if val is null or val < 0 or val > 10000000 then continue; end if;
+    w := translate(lower(btrim(k)), acc, pla);
+    for h in select x from jsonb_array_elements(coalesce(hs, '[]'::jsonb)) x loop
+      if h->>'id' = k
+         or translate(lower(btrim(coalesce(h->>'name',''))), acc, pla) = w
+         or (h->>'type' = 'count' and translate(lower(btrim(coalesce(h->>'unit',''))), acc, pla) = w) then
+        patch := patch || jsonb_build_object(h->>'id', trim_scale(val));
+        names := names || (h->>'name');
+        exit;
+      end if;
+    end loop;
+  end loop;
+  update public.atajo_tokens set last_used = now() where user_id = uid;
+  if patch = '{}'::jsonb then return jsonb_build_object('ok', false, 'error', 'habito'); end if;
+  insert into public.day_logs (user_id, day, v) values (uid, d, patch)
+  on conflict (user_id, day) do update set v = public.day_logs.v || excluded.v, updated_at = now();
+  return jsonb_build_object('ok', true, 'dia', d, 'registrado', to_jsonb(names));
+end $$;
+revoke all on function public.atajo(jsonb) from public;
+grant execute on function public.atajo(jsonb) to anon, authenticated;
+notify pgrst, 'reload schema';
