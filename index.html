@@ -228,21 +228,27 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 .wkrow i.off{box-shadow:none;height:2px;width:10px;border-radius:1px;background:var(--line)}
 .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 14px}
 .prow2{display:flex;flex-wrap:wrap;align-items:center;gap:2px 4px}
-.chat{display:flex;flex-direction:column;gap:10px}
-.msg{margin:0;max-width:86%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
-.msg.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px}
-.msg.ai{align-self:flex-start;background:var(--raise);border:1px solid var(--line);border-bottom-left-radius:6px}
-.msg.sys{align-self:center;max-width:100%;padding:2px 0;color:var(--muted);font-size:13px;text-align:center}
-.typing{display:flex;gap:5px;padding:14px 16px}
-.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:asdot 1s infinite ease-in-out}
-.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
-@keyframes asdot{0%,80%,100%{opacity:.25}40%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.typing i{animation:none;opacity:.6}}
-.pv{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--accent);border-radius:16px}
-.askbar{display:flex;gap:8px;align-items:flex-end}
-.askbar textarea{flex:1;min-height:48px;max-height:140px;border-radius:24px;border:1px solid var(--line);background:var(--bg);padding:13px 16px;font-size:16px;line-height:1.35;resize:none;color:var(--ink)}
-.askbar .primary{flex:none;width:48px;padding:0;font-size:20px}
-.askbar .primary:disabled{opacity:.4}
+.gdots{display:flex;gap:6px}
+.gdots i{flex:1;height:3px;border-radius:2px;background:var(--line)}
+.gdots i.on{background:var(--accent)}
+.gpick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gopt{display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--raise);color:var(--ink);min-height:64px}
+.gopt span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.gopt b{font-weight:600;font-size:15px}
+.gopt small{color:var(--muted);font-size:12px}
+.gopt .ico{flex:none;color:var(--muted)}
+.gopt.on{border-color:var(--accent)}
+.gopt.on .ico{color:var(--accent)}
+.gopt:disabled{opacity:.55}
+.gstyles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gsty{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;border-radius:18px;border:2px solid;text-align:left}
+.gsty b{font-size:26px;line-height:1;text-transform:lowercase}
+.gsty small{color:#8a857c;letter-spacing:.15em;font-size:12px}
+.gbar{display:block;width:100%;height:6px;border-radius:3px}
+.gbar u{display:block;width:65%;height:100%;border-radius:3px}
+.gnav{justify-content:flex-end}
+.warn{color:var(--warn)}
+.sicknote{margin-top:-4px}
 .how{margin:4px 0}
 .how summary{cursor:pointer;color:var(--accent);font-size:14px;padding:6px 0}
 .how ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
@@ -441,7 +447,7 @@ input[type=checkbox]{width:22px;height:22px;flex:none;padding:0;accent-color:var
 <script>
 (function(){
 "use strict";
-var VERSION = "1.27";
+var VERSION = "1.28";
 var $ = function(id){ return document.getElementById(id); };
 (function(){
   var sp=$("splash"), seen=false;
@@ -450,7 +456,7 @@ var $ = function(id){ return document.getElementById(id); };
   setTimeout(function(){ sp.remove(); }, 2000);
 })();
 var app = $("app");
-var AS = {chat:[], busy:false, preview:null, left:null, scroll:false};
+var G = {step:0, picks:null, style:"", msg:""};
 var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
 var fmt = function(n){ return Number(n).toLocaleString("es-MX",{maximumFractionDigits:2}); };
 var r2 = function(n){ return Math.round(n*100)/100; };
@@ -509,11 +515,23 @@ function val(h,k){ var d=S.days[k]; return d ? (Number(d[h.id])||0) : 0; }
 function ratio(h,k){ var v=val(h,k); if(h.type!=="count") return v>=1?1:0; return h.goal>0 ? Math.min(1,v/h.goal) : (v>0?1:0); }
 function met(h,k){ return ratio(h,k)>=1; }
 function weekCount(h,k){ var m=monday(k), n=0; for(var i=0;i<7;i++) if(val(h,addDays(m,i))>=1) n++; return n; }
-function weekMet(h,mon){ return weekCount(h,mon) >= (h.goal||1); }
+function weekMet(h,mon){ var g=weekGoal(h,mon); return g>0 && weekCount(h,mon) >= g; }
+function weekOff(h,mon){ return weekGoal(h,mon)===0 && weekCount(h,mon)===0; }
 function wdOf(k){ return (parse(k).getDay()+6)%7; }
 function restOf(k){ var r=(S.profile||{}).rest; return r ? r[k] : undefined; }
 function isRest(k){ return restOf(k)===true; }
-function restsHabit(h,k){ var r=restOf(k); return r===true || (Array.isArray(r) && r.indexOf(h.id)>=0); }
+/* Sick day: whatever you manage to do still counts; whatever you skip is excused and keeps every streak alive. */
+function isSick(k){ var s=(S.profile||{}).sick; return !!(s && s[k]); }
+function excused(k){ return isRest(k) || isSick(k); }
+function restsHabit(h,k){ if(isSick(k)) return true; var r=restOf(k); return r===true || (Array.isArray(r) && r.indexOf(h.id)>=0); }
+function toggleSick(k){
+  var m=Object.assign({}, (S.profile||{}).sick||{});
+  if(m[k]) delete m[k]; else m[k]=true;
+  setProfile({sick:m}); render();
+}
+/* Weekly goals shrink in proportion to the sick days of that week (0 = the week is excused). */
+function sickDays(mon){ var n=0; for(var i=0;i<7;i++) if(isSick(addDays(mon,i))) n++; return n; }
+function weekGoal(h,mon){ var g=h.goal||1, s=sickDays(mon); return s ? Math.ceil(g*(7-s)/7) : g; }
 function active(h,k){ if(restsHabit(h,k)) return false; if(isWeek(h) || !Array.isArray(h.days) || !h.days.length) return true; return h.days.indexOf(wdOf(k))>=0; }
 function metCount(k){ var n=0; S.habits.forEach(function(h){ if(met(h,k)) n++; }); return n; }
 function streak(h){
@@ -521,7 +539,7 @@ function streak(h){
   if(isWeek(h)){
     var m=monday(today());
     if(!weekMet(h,m)) m=addDays(m,-7);
-    while(weekMet(h,m) && g++<1000){ n++; m=addDays(m,-7); }
+    while(g++<1000){ if(weekMet(h,m)) n++; else if(!weekOff(h,m)) break; m=addDays(m,-7); }
     return n;
   }
   var k=today(), first=firstKey();
@@ -538,7 +556,7 @@ function bestStreak(h){
   var best=0, run=0, g=0, end=today();
   if(isWeek(h)){
     var m=monday(firstKey());
-    while(m<=end && g++<1000){ if(weekMet(h,m)){ run++; if(run>best) best=run; } else if(m<monday(end)) run=0; m=addDays(m,7); }
+    while(m<=end && g++<1000){ if(weekMet(h,m)){ run++; if(run>best) best=run; } else if(m<monday(end) && !weekOff(h,m)) run=0; m=addDays(m,7); }
     return best;
   }
   var k=firstKey();
@@ -573,17 +591,17 @@ function dayScore(k){
 }
 function dayStreak(){
   var k=today(), n=0, g=0, first=firstKey();
-  if(!metCount(k) && !isRest(k)) k=addDays(k,-1);
+  if(!metCount(k) && !excused(k)) k=addDays(k,-1);
   while(g++<4000 && k>=first){
     if(metCount(k)>0) n++;
-    else if(!isRest(k)) break;
+    else if(!excused(k)) break;
     k=addDays(k,-1);
   }
   return n;
 }
 function bestDayStreak(){
   var k=firstKey(), end=today(), best=0, run=0, g=0;
-  while(k<=end && g++<4000){ if(metCount(k)>0){ run++; if(run>best) best=run; } else if(!isRest(k) && k<end) run=0; k=addDays(k,1); }
+  while(k<=end && g++<4000){ if(metCount(k)>0){ run++; if(run>best) best=run; } else if(!excused(k) && k<end) run=0; k=addDays(k,1); }
   return best;
 }
 function loadLocal(){
@@ -762,8 +780,8 @@ function viewHoy(){
   var k=S.sel, t=today(), d=parse(k), sc=dayScore(k);
   var wk = k===t ? "hoy · "+d.toLocaleDateString("es-MX",{weekday:"long"}) : d.toLocaleDateString("es-MX",{weekday:"long"});
   var ds=dayStreak();
-  var rest=isRest(k);
-  var state = rest ? "descanso" : !sc.n ? "" : sc.m===sc.n ? "día completo" : sc.m+" de "+sc.n;
+  var rest=isRest(k), sick=isSick(k);
+  var state = sick ? "enfermo" : rest ? "descanso" : !sc.n ? "" : sc.m===sc.n ? "día completo" : sc.m+" de "+sc.n;
   var h = notes();
   h += '<header class="head"><div class="row"><div class="daynav"><button class="nav" data-a="prev" aria-label="Día anterior">‹</button>'
     + '<span class="wkday">'+esc(wk)+'</span>'
@@ -772,11 +790,13 @@ function viewHoy(){
     + '<div class="row end"><h1>'+esc(d.toLocaleDateString("es-MX",{day:"numeric",month:"long"}))+'</h1><em class="state">'+state+'</em></div>'
     + '<div class="rule"></div>'
     + '<div class="prog"><div class="bar"><u style="width:'+sc.pct+'%"></u></div><span class="num">'+sc.pct+'%</span></div>'
-    + (S.habits.length ? (function(){ var r=restOf(k), part=Array.isArray(r) && r.length; var lbl = rest ? 'descansa todo · editar' : part ? 'descansa: '+r.map(function(id){ var hh=find(id); return hh?hh.name:''; }).filter(Boolean).join(', ')+' · editar' : 'marcar descanso'; return '<div class="tools restrow"><button class="chip'+(rest||part?' on':'')+'" data-a="rest">'+esc(lbl)+'</button></div>'; })() : '')
+    + (S.habits.length ? (function(){ var r=restOf(k), part=Array.isArray(r) && r.length; var lbl = rest ? 'descansa todo · editar' : part ? 'descansa: '+r.map(function(id){ var hh=find(id); return hh?hh.name:''; }).filter(Boolean).join(', ')+' · editar' : 'marcar descanso'; var sl = sick ? 'enfermo · quitar' : isSick(addDays(k,-1)) ? '¿sigues enfermo?' : 'estoy enfermo';
+      return '<div class="tools restrow">'+(sick ? '' : '<button class="chip'+(rest||part?' on':'')+'" data-a="rest">'+esc(lbl)+'</button>')+'<button class="chip'+(sick?' on':'')+'" data-a="sick" aria-pressed="'+sick+'">'+esc(sl)+'</button></div>'
+        + (sick ? '<p class="small sicknote">Recupérate. Lo que hagas hoy cuenta y lo que no, no rompe ninguna racha.</p>' : ''); })() : '')
     + ((S.profile||{}).quotes!==false ? '<p class="quote"><em>'+esc(quoteFor(k))+'</em></p>' : '')+'</header>';
   if(!S.cfgLoaded){ return h+'<p class="empty">Cargando tus hábitos…</p>'; }
   if(!S.habits.length){
-    return h+'<div class="card"><p class="empty">Todavía no hay hábitos en tu bitácora.</p><button class="primary" data-a="new-habit">Crear el primer hábito</button>'+(sb && !user ? '<button class="ghost" data-a="login">Ya tengo cuenta: iniciar sesión</button>' : '')+'</div>';
+    return h+'<div class="card"><p class="empty">Todavía no hay hábitos en tu bitácora. La guía te deja todo listo en 2 minutos.</p><button class="primary" data-a="go" data-v="guia">empezar guía</button><button class="ghost" data-a="new-habit">crear un hábito a mano</button>'+(sb && !user ? '<button class="ghost" data-a="login">Ya tengo cuenta: iniciar sesión</button>' : '')+'</div>';
   }
   var mon=monday(k);
   h += '<ul class="list">';
@@ -785,9 +805,9 @@ function viewHoy(){
     var v=val(x,k), ok=met(x,k), st=streak(x), u = x.unit ? ' '+esc(x.unit) : '', act=active(x,k);
     var sub, cardMet=ok;
     if(x.type==="count") sub = fmt(v)+' / '+fmt(x.goal)+u;
-    else if(isWeek(x)){ var wc=weekCount(x,k); cardMet=wc>=x.goal; sub = wc+' de '+x.goal+' esta semana'+(cardMet?' · cumplida':''); }
+    else if(isWeek(x)){ var wc=weekCount(x,k), wg=weekGoal(x,monday(k)); cardMet=wg>0 && wc>=wg; sub = wc+' de '+wg+' esta semana'+(wg<(x.goal||1)?' (ajustada por enfermedad)':'')+(cardMet?' · cumplida':''); }
     else sub = ok?'hecho':'pendiente';
-    if(!act && !ok) sub = restsHabit(x,k) ? 'descansa hoy' : 'hoy descansa · '+daysLabel(x);
+    if(!act && !ok) sub = restsHabit(x,k) ? (isSick(k) ? 'enfermo · no rompe racha' : 'descansa hoy') : 'hoy descansa · '+daysLabel(x);
     h += '<li class="card'+(cardMet?' met':'')+(!act && !ok?' off':'')+'"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3><em class="sub">'+sub+'</em></div>';
     if(x.type==="count"){
       h += '<button class="orb'+(ok?' on':'')+'" data-a="inc" data-id="'+x.id+'" aria-label="Sumar '+fmt(x.step)+u+' a '+esc(x.name)+'">'+(ok?'✓':'+')+'</button></div>';
@@ -825,7 +845,7 @@ function viewHist(){
     h += '</div>';
   });
   h += '</div>';
-  h += '<p class="legend"><span><i style="background:var(--accent)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span><span><i style="box-shadow:inset 0 0 0 1px var(--line)"></i>Descanso</span></p><ul class="list">';
+  h += '<p class="legend"><span><i style="background:var(--accent)"></i>Meta cumplida</span><span><i style="background:var(--dim)"></i>Avance parcial</span><span><i style="background:var(--line)"></i>Sin registro</span><span><i style="box-shadow:inset 0 0 0 1px var(--line)"></i>Descanso o enfermo</span></p><ul class="list">';
   S.habits.forEach(function(x){
     var c=consistency(x), wk=isWeek(x);
     h += '<li class="card"><div class="hrow"><span class="ico">'+svg(iconOf(x))+'</span><div class="hname"><h3>'+esc(x.name)+'</h3></div></div><div class="stats">'
@@ -930,7 +950,7 @@ function opt(key, val, label, cur){ return '<button class="chip'+(cur===val?' on
 function viewPers(){
   var pf=S.profile||{};
   var h = notes()+'<div><button class="chip" data-a="go" data-v="ajustes">‹ editar perfil</button></div><div><p class="eyebrow">a tu gusto</p><h1>personalizar</h1></div>';
-  h += '<div class="card"><div class="row"><div class="hname"><h3>asistente</h3><em class="sub">dime qué estilo quieres y lo armo</em></div><button class="primary" data-a="go" data-v="asistente">abrir</button></div></div>';
+  h += '<div class="card"><div class="row"><div class="hname"><h3>guía de inicio</h3><em class="sub">hábitos, estilo y recordatorios en 4 pasos</em></div><button class="ghost" data-a="go" data-v="guia">abrir</button></div></div>';
   var cur=accentKey();
   h += '<div class="card"><h3>apariencia</h3><div class="setrow"><span>Color · '+esc(ACCENTS[cur].label)+'</span><div class="palette">';
   var grp="";
@@ -970,23 +990,17 @@ function viewAjustes(){
   return h;
 }
 function render(){
-  if(S.view!=="asistente" && AS.preview) AS.preview=null;
-  if(AS.preview){ var real=S.profile; S.profile=Object.assign({}, real, AS.preview); try{ applyLook(); } finally{ S.profile=real; } }
-  else applyLook();
-  var inp=document.getElementById("as-input"), keep=inp ? {v:inp.value, f:document.activeElement===inp} : null;
-  app.innerHTML = S.view==="asistente" ? viewAsistente() : S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : S.view==="comunidad" ? viewComunidad() : viewHoy();
-  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes" || S.view==="comunidad" || S.view==="asistente"))); });
-  if(S.view==="asistente"){
-    var ni=document.getElementById("as-input");
-    if(ni && keep){ ni.value=keep.v; if(keep.f) ni.focus(); }
-    if(ni) asGrow(ni);
-    if(AS.scroll){ AS.scroll=false; window.scrollTo(0, document.body.scrollHeight); }
-  }
+  applyLook();
+  var inp=document.getElementById("g-name"), keep=inp ? {v:inp.value, f:document.activeElement===inp} : null;
+  app.innerHTML = S.view==="guia" ? viewGuia() : S.view==="historial" ? viewHist() : S.view==="habitos" ? viewHabits() : S.view==="perfil" ? viewPerfil() : S.view==="personalizar" ? viewPers() : S.view==="ajustes" ? viewAjustes() : S.view==="comunidad" ? viewComunidad() : viewHoy();
+  ["hoy","historial","habitos","perfil"].forEach(function(v){ $("tab-"+v).classList.toggle("on", S.view===v || (v==="perfil" && (S.view==="personalizar" || S.view==="ajustes" || S.view==="comunidad" || S.view==="guia"))); });
+  var ni=document.getElementById("g-name");
+  if(ni && keep){ ni.value=keep.v; if(keep.f) ni.focus(); }
 }
 function route(){
   var v = location.hash.replace("#","");
-  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes"||v==="comunidad"||v==="asistente") ? v : "hoy";
-  if(S.view==="asistente") AS.scroll=true;
+  S.view = (v==="historial"||v==="habitos"||v==="perfil"||v==="personalizar"||v==="ajustes"||v==="comunidad"||v==="guia") ? v : "hoy";
+  if(S.view==="guia"){ G.step=0; G.picks=null; G.msg=""; window.scrollTo(0,0); }
   render();
 }
 window.addEventListener("hashchange", route);
@@ -1393,100 +1407,87 @@ function atajoCard(){
   if(AT.msg) h += '<p class="small">'+esc(AT.msg)+'</p>';
   return h+'</div>';
 }
-/* ---------- AI assistant for personalization ---------- */
-var AS_SUG = ["algo más agresivo", "minimalista en grises", "tonos fríos y calmados", "más fácil de leer"];
-function asCatalog(){
-  return {
-    colores: Object.keys(ACCENTS).filter(function(k){ return k!=="custom" && /^#[0-9a-f]{6}$/i.test(ACCENTS[k].a); }).map(function(k){ return {k:k, l:ACCENTS[k].label, c:ACCENTS[k].a}; }),
-    tipografias: Object.keys(FONTS).map(function(k){ return {k:k, l:FONTS[k].label}; }),
-    fondos: Object.keys(BGS).map(function(k){ return {k:k, l:BG_LABELS[k]||BGS[k].label}; })
-  };
+/* ---------- onboarding guide: plain steps, no AI ---------- */
+var G_TPL = [
+  {k:"leer", name:"Leer", type:"count", goal:20, unit:"min", step:5, icon:"libro", d:"20 min al día"},
+  {k:"agua", name:"Agua", type:"count", goal:2, unit:"L", step:0.25, icon:"gota", d:"2 L al día"},
+  {k:"pasos", name:"Pasos", type:"count", goal:8000, unit:"pasos", step:1000, icon:"tenis", d:"8,000 al día"},
+  {k:"entrenar", name:"Entrenar", type:"week", goal:4, icon:"pesa", d:"4 veces por semana"},
+  {k:"escribir", name:"Escribir", type:"check", icon:"pluma", d:"diario o notas"},
+  {k:"meditar", name:"Meditar", type:"check", icon:"hoja", d:"aunque sean 5 min"},
+  {k:"estudiar", name:"Estudiar", type:"count", goal:60, unit:"min", step:15, icon:"estudio", d:"1 hora al día"},
+  {k:"dormir", name:"Dormir antes de las 11", type:"check", icon:"cama", d:"cada noche"},
+  {k:"celular", name:"Sin celular al despertar", type:"check", icon:"pantalla", d:"la primera hora"},
+  {k:"estirar", name:"Estirar", type:"check", icon:"sol", d:"10 min al día"}
+];
+var G_STYLES = [
+  {n:"grind", bg:"negro", ac:"carmesi-2", f:"anton"},
+  {n:"clásico", bg:"calido", ac:"oro-1", f:"serif"},
+  {n:"frío", bg:"medianoche", ac:"cielo-1", f:"manrope"},
+  {n:"bosque", bg:"bosque", ac:"salvia-1", f:"archivo"},
+  {n:"minimal", bg:"grafito", ac:"plata-1", f:"sans"},
+  {n:"atleta", bg:"carbon", ac:"lima-1", f:"bebas"}
+];
+function gHas(t){ var n=plain(t.name); return S.habits.some(function(h){ return plain(h.name)===n; }); }
+function guiaNext(){
+  if(G.step===0){ var nm=($("g-name")||{}).value; if(nm!=null && nm.trim() && nm.trim()!==((S.profile||{}).name||"")) setProfile({name:nm.trim().slice(0,40)}); }
+  if(G.step===1){
+    var add=G_TPL.filter(function(t){ return G.picks[t.k] && !gHas(t); });
+    if(!add.length && !S.habits.length){ G.msg="Elige al menos un hábito para empezar."; render(); return; }
+    var base=Date.now();
+    add.forEach(function(t,i){
+      var nh={id:"h"+(base+i).toString(36), since:today(), name:t.name, type:t.type, icon:t.icon};
+      if(t.type==="count"){ nh.goal=t.goal; nh.unit=t.unit; nh.step=t.step; }
+      if(t.type==="week") nh.goal=t.goal;
+      S.habits.push(nh);
+    });
+    G.added=add.length;
+    if(add.length) saveCfg();
+  }
+  if(G.step===4){ setProfile({guided:true}); location.hash="hoy"; window.scrollTo(0,0); return; }
+  G.step++; G.msg=""; render(); window.scrollTo(0,0);
 }
-function asLook(){ return Object.assign({}, S.profile||{}, AS.preview||{}); }
-/* Keep only values this version of the app knows, and only those that actually change something. */
-function asValid(c){
-  var out={}, now=asLook();
-  if(!c || typeof c!=="object") return out;
-  if(c.accent==="custom" && /^#[0-9a-f]{6}$/i.test(c.accentHex||"")){ if(now.accent!=="custom" || String(now.accentHex).toLowerCase()!==c.accentHex.toLowerCase()){ out.accent="custom"; out.accentHex=c.accentHex.toLowerCase(); } }
-  else if(typeof c.accent==="string" && c.accent!=="custom" && ACCENTS[c.accent] && c.accent!==accentKey()) out.accent=c.accent;
-  if(typeof c.bgTheme==="string" && BGS[c.bgTheme] && c.bgTheme!==bgKey()) out.bgTheme=c.bgTheme;
-  if(typeof c.font==="string" && FONTS[c.font] && c.font!==fontKey()) out.font=c.font;
-  if((c.size==="normal"||c.size==="grande") && c.size!==(now.size==="grande"?"grande":"normal")) out.size=c.size;
-  if(typeof c.tally==="boolean" && c.tally!==(now.tally!==false)) out.tally=c.tally;
-  if(typeof c.quotes==="boolean" && c.quotes!==(now.quotes!==false)) out.quotes=c.quotes;
-  if((c.quoteLang==="es"||c.quoteLang==="en") && c.quoteLang!==(now.quoteLang==="en"?"en":"es")) out.quoteLang=c.quoteLang;
-  return out;
+function viewGuia(){
+  if(!G.picks){ G.picks={}; G.added=0; }
+  var steps=["bienvenida","hábitos","estilo","recordatorios","listo"], pf=S.profile||{};
+  var h = notes()+'<div><button class="chip" data-a="go" data-v="hoy">‹ salir de la guía</button></div>'
+    + '<div><p class="eyebrow">paso '+(G.step+1)+' de 5 · '+steps[G.step]+'</p><h1>'+["empieza aquí","tus hábitos","tu estilo","no se te pase","listo"][G.step]+'</h1></div>'
+    + '<div class="gdots" aria-hidden="true">'+steps.map(function(x,i){ return '<i class="'+(i<=G.step?'on':'')+'"></i>'; }).join("")+'</div>';
+  var c='';
+  if(G.step===0){
+    c += '<p>Esta app es tu bitácora de constancia: marcas cada día lo que hiciste y ves crecer tus rachas.</p>'
+      + '<p class="small">En los siguientes pasos eliges tus hábitos, el estilo y los recordatorios. Todo se puede cambiar después.</p>'
+      + '<label>¿Cómo te llamamos?<input id="g-name" maxlength="40" autocomplete="given-name" value="'+esc(pf.name||"")+'" placeholder="Tu nombre"></label>';
+  }else if(G.step===1){
+    c += '<p class="small">Toca los que quieras llevar. Las metas las ajustas después en la pestaña hábitos.</p><div class="gpick">';
+    G_TPL.forEach(function(t){
+      var has=gHas(t), on=has || !!G.picks[t.k];
+      c += '<button class="gopt'+(on?' on':'')+'" data-a="g-pick" data-v="'+t.k+'"'+(has?' disabled':'')+' aria-pressed="'+on+'"><span class="ico">'+svg(t.icon)+'</span><span><b>'+esc(t.name)+'</b><small>'+esc(has ? "ya lo tienes" : t.d)+'</small></span></button>';
+    });
+    c += '</div><p class="small">¿Falta alguno? Al terminar puedes crear los tuyos en hábitos → nuevo.</p>';
+  }else if(G.step===2){
+    c += '<p class="small">Toca uno para verlo en toda la app. Hay muchos más colores, fondos y tipografías en personalizar.</p><div class="gstyles">';
+    G_STYLES.forEach(function(st,i){
+      var b=BGS[st.bg]||BGS.calido, a=(ACCENTS[st.ac]||{}).a||"#d9b97c", f=(FONTS[st.f]||{}).css||"inherit";
+      jlgFont(st.f);
+      c += '<button class="gsty'+(G.style===st.n?' on':'')+'" data-a="g-style" data-v="'+i+'" aria-pressed="'+(G.style===st.n)+'" style="background:'+b.bg+';border-color:'+(G.style===st.n?a:b.line)+'">'
+        + '<b style="font-family:'+esc(f)+';color:'+a+'">'+esc(st.n)+'</b><span class="gbar" style="background:'+b.line+'"><u style="background:'+a+'"></u></span><small>|||| ||</small></button>';
+    });
+    c += '</div>';
+  }else if(G.step===3){
+    if(!sb || !user) c += '<p class="small">Para recibir recordatorios y la frase del día necesitas una cuenta: así también se respaldan tus datos.</p><div class="tools"><button class="primary" data-a="login">crear cuenta o iniciar sesión</button></div>';
+    else if(!pushSupported()) c += '<p class="small">En el iPhone, primero agrega la app a tu pantalla de inicio (Safari → Compartir → Agregar a inicio) y ábrela desde ese ícono. Ahí podrás activar las notificaciones en perfil → editar perfil.</p>';
+    else if(S.pushOn) c += '<p>Notificaciones activas. Te llega la frase del día a las 7:30; puedes agregar recordatorios por hábito en editar perfil.</p>';
+    else c += '<p class="small">Activa las notificaciones para recibir la frase del día a las 7:30 y tus recordatorios.</p><div class="tools"><button class="primary" data-a="push-on">activar notificaciones</button></div>'+(S.pushMsg ? '<p class="small" role="status">'+esc(S.pushMsg)+'</p>' : '');
+  }else{
+    c += '<p>'+(pf.name ? esc(pf.name)+', tu' : 'Tu')+' bitácora está lista'+(G.added ? ' con '+G.added+(G.added===1?' hábito nuevo':' hábitos nuevos') : '')+'.</p>'
+      + '<p class="small">Cada día marca lo que hiciste en la pestaña día. Si un día descansas o te enfermas, márcalo ahí mismo y tu racha no se pierde.</p>';
+  }
+  if(G.msg) c += '<p class="small warn" role="alert">'+esc(G.msg)+'</p>';
+  c += '<div class="tools gnav">'+(G.step>0 && G.step<4 ? '<button class="ghost" data-a="g-back">atrás</button>' : '')
+    + '<button class="primary" data-a="g-next">'+(G.step===0 ? 'empezar' : G.step===4 ? 'ir a mi día' : G.step===3 && !S.pushOn ? 'omitir por ahora' : 'seguir')+'</button></div>';
+  return h+'<div class="card">'+c+'</div>';
 }
-function asLabel(p){
-  var t=[];
-  if(p.accent) t.push("color "+(p.accent==="custom" ? "propio" : (ACCENTS[p.accent]||{}).label));
-  if(p.bgTheme) t.push("fondo "+(BG_LABELS[p.bgTheme]||BGS[p.bgTheme].label));
-  if(p.font) t.push("tipografía "+FONTS[p.font].label);
-  if(p.size) t.push("texto "+p.size);
-  if(p.tally!=null) t.push(p.tally ? "rayitas y número" : "solo número");
-  if(p.quotes!=null) t.push("frase del día "+(p.quotes ? "visible" : "oculta"));
-  if(p.quoteLang) t.push("frases en "+(p.quoteLang==="en" ? "inglés" : "español"));
-  return t.join(" · ");
-}
-var AS_ERR = {
-  sesion:"Tu sesión expiró. Cierra sesión y vuelve a entrar.",
-  config:"El asistente todavía no tiene configurada su llave de Anthropic.",
-  llave:"La llave de Anthropic no es válida. Revísala en Supabase.",
-  saldo:"Se acabó el saldo de Anthropic. Recárgalo en la consola de Anthropic.",
-  ocupado:"El asistente está saturado. Intenta en un momento."
-};
-async function asSend(text){
-  text=String(text||"").trim().slice(0,400);
-  if(!text || AS.busy || !sb || !user) return;
-  AS.chat.push({role:"user", text:text}); AS.busy=true; AS.scroll=true; render();
-  var msg="", ch={};
-  try{
-    var r = await sb.functions.invoke("asistente", {body:{
-      mensajes: AS.chat.filter(function(m){ return m.role!=="sys"; }).slice(-12).map(function(m){ return {role:m.role, text:m.text}; }),
-      actual: asLook(), catalogo: asCatalog()
-    }});
-    if(r.error){
-      var code="", info={};
-      try{ info = await r.error.context.json(); code = info.error||""; }catch(e){}
-      if(code==="limite") msg="Llegaste al límite de "+(info.limite||"")+" mensajes de hoy. Mañana se reinicia.";
-      else if(AS_ERR[code]) msg=AS_ERR[code];
-      else msg = navigator.onLine===false || /fetch/i.test(String(r.error.name)) ? "Sin conexión. Revisa tu internet e intenta de nuevo." : "No pude responder. Intenta de nuevo.";
-      AS.chat.push({role:"sys", text:msg});
-    }else{
-      var d=r.data||{};
-      ch = asValid(d.cambios);
-      AS.chat.push({role:"assistant", text:String(d.mensaje||"").slice(0,800) || "Te dejo la propuesta en vista previa."});
-      if(typeof d.restantes==="number") AS.left=d.restantes;
-      if(Object.keys(ch).length) AS.preview=Object.assign({}, AS.preview||{}, ch);
-    }
-  }catch(e){ AS.chat.push({role:"sys", text:"Sin conexión. Revisa tu internet e intenta de nuevo."}); }
-  AS.busy=false; AS.scroll=true;
-  if(!document.querySelector("dialog[open]")) render();
-}
-function asGrow(t){ t.style.height="auto"; t.style.height=Math.min(140, t.scrollHeight)+"px"; }
-function viewAsistente(){
-  var h = notes()+'<div><button class="chip" data-a="go" data-v="personalizar">‹ personalizar</button></div><div><p class="eyebrow">tu estilo, en palabras</p><h1>asistente</h1></div>';
-  if(!sb || !user) return h+'<div class="card"><p class="small">Inicia sesión para usar el asistente: así tus cambios se guardan en tu cuenta.</p><div class="tools"><button class="primary" data-a="login">iniciar sesión</button></div></div>';
-  h += '<div class="card"><div class="chat" aria-live="polite">';
-  if(!AS.chat.length) h += '<p class="msg ai">Dime cómo quieres ver tu app y armo el estilo: color, fondo, tipografía y más. Lo ves en vista previa antes de guardarlo.</p>';
-  AS.chat.forEach(function(m){ h += '<p class="msg '+(m.role==="user" ? "me" : m.role==="assistant" ? "ai" : "sys")+'">'+esc(m.text)+'</p>'; });
-  if(AS.busy) h += '<p class="msg ai typing" role="status" aria-label="Escribiendo"><i></i><i></i><i></i></p>';
-  h += '</div>';
-  if(AS.preview) h += '<div class="pv"><p class="small"><b>vista previa</b> · '+esc(asLabel(AS.preview))+'</p><div class="tools"><button class="primary" data-a="as-keep">quedármelo</button><button class="ghost" data-a="as-undo">deshacer</button></div></div>';
-  if(!AS.chat.length) h += '<div class="tools">'+AS_SUG.map(function(t){ return '<button class="chip" data-a="as-sug" data-v="'+esc(t)+'">'+esc(t)+'</button>'; }).join("")+'</div>';
-  h += '<form class="askbar" id="as-form"><textarea id="as-input" rows="1" maxlength="400" placeholder="Ej. algo agresivo en rojo" aria-label="Escribe al asistente"></textarea><button class="primary" type="submit" aria-label="Enviar"'+(AS.busy?' disabled':'')+'>↑</button></form>';
-  if(AS.left!==null && AS.left<=5) h += '<p class="small">Te quedan '+AS.left+' mensajes hoy.</p>';
-  return h+'</div>';
-}
-document.addEventListener("submit", function(ev){
-  if(!ev.target || ev.target.id!=="as-form") return;
-  ev.preventDefault();
-  var t=document.getElementById("as-input"), v=t.value; t.value=""; asSend(v);
-});
-document.addEventListener("keydown", function(ev){
-  if(ev.target && ev.target.id==="as-input" && ev.key==="Enter" && !ev.shiftKey && !ev.isComposing){ ev.preventDefault(); var v=ev.target.value; ev.target.value=""; asSend(v); }
-});
-document.addEventListener("input", function(ev){ if(ev.target && ev.target.id==="as-input") asGrow(ev.target); });
 /* login dialog */
 function openLogin(){
   $("lg-email").value = (S.profile && S.profile.email) || "";
@@ -1628,8 +1629,8 @@ function thumbFrom(src, size){
 }
 function snapshot(){
   var t=today(), sc=dayScore(t);
-  return {day:t, pct:sc.pct, streak:dayStreak(), rest:isRest(t), habits:S.habits.slice(0,20).map(function(h){
-    return {n:h.name, i:iconOf(h), s:streak(h), d: isWeek(h) ? weekCount(h,t)>=(h.goal||1) : met(h,t), off: !active(h,t) && !met(h,t), w: isWeek(h) ? weekCount(h,t)+"/"+h.goal : null};
+  return {day:t, pct:sc.pct, streak:dayStreak(), rest:isRest(t), sick:isSick(t), habits:S.habits.slice(0,20).map(function(h){
+    return {n:h.name, i:iconOf(h), s:streak(h), d: isWeek(h) ? weekMet(h,monday(t)) : met(h,t), off: !active(h,t) && !met(h,t), w: isWeek(h) ? weekCount(h,t)+"/"+weekGoal(h,monday(t)) : null};
   })};
 }
 async function publishPublic(){
@@ -1692,7 +1693,7 @@ function personCard(p){
   if(p.hidden || !p.is_public) return '<li class="card"><div class="prow">'+avatar(p.thumb, p.name||p.handle||"?")+'<div class="hname"><b>'+esc(p.name||p.handle||"Perfil privado")+'</b><span class="small">Este perfil ya no comparte su actividad.</span></div>'+followBtn(p.user_id)+'</div></li>';
   var s=p.summary||{}, isToday = s.day===today();
   var h='<li class="card"><div class="prow">'+avatar(p.thumb, p.name||p.handle)+'<div class="hname"><b>'+esc(p.name||p.handle)+'</b><span class="small">@'+esc(p.handle)+'</span></div>'+followBtn(p.user_id)+'</div>';
-  h+='<div class="row"><em class="sub">'+(isToday ? (s.rest ? 'día de descanso' : (Number(s.pct)||0)+'% de hoy') : 'aún sin actividad hoy')+'</em><span class="run"><b class="num">'+(Number(s.streak)||0)+'</b>días</span></div>';
+  h+='<div class="row"><em class="sub">'+(isToday ? (s.sick ? 'día enfermo' : s.rest ? 'día de descanso' : (Number(s.pct)||0)+'% de hoy') : 'aún sin actividad hoy')+'</em><span class="run"><b class="num">'+(Number(s.streak)||0)+'</b>días</span></div>';
   if(Array.isArray(s.habits) && s.habits.length){
     h+='<div class="pills">';
     s.habits.forEach(function(x){ h+='<span class="pill'+(isToday && x.d ? ' on' : '')+(isToday && x.off ? ' off' : '')+'">'+svg(String(x.i||""))+esc(x.n||"")+(x.w ? ' · '+esc(x.w) : (Number(x.s) ? ' · '+Number(x.s) : ''))+'</span>'; });
@@ -1771,9 +1772,11 @@ document.addEventListener("click", function(ev){
   else if(a==="set"){ var o={}, sv=el.dataset.v; o[el.dataset.k] = sv==="true" ? true : sv==="false" ? false : sv; setProfile(o); render(); }
   else if(a==="font"){ setProfile({font:el.dataset.v}); render(); }
   else if(a==="atajo-new"){ newAtajo(); }
-  else if(a==="as-sug"){ asSend(el.dataset.v); }
-  else if(a==="as-keep"){ if(AS.preview){ setProfile(AS.preview); AS.preview=null; AS.chat.push({role:"sys", text:"Guardado."}); AS.scroll=true; render(); } }
-  else if(a==="as-undo"){ AS.preview=null; AS.chat.push({role:"sys", text:"Vista previa descartada."}); AS.scroll=true; render(); }
+  else if(a==="sick"){ toggleSick(k); }
+  else if(a==="g-pick"){ G.picks[el.dataset.v]=!G.picks[el.dataset.v]; G.msg=""; render(); }
+  else if(a==="g-style"){ var st=G_STYLES[Number(el.dataset.v)]; if(st){ G.style=st.n; setProfile({bgTheme:st.bg, accent:st.ac, font:st.f}); render(); } }
+  else if(a==="g-next"){ guiaNext(); }
+  else if(a==="g-back"){ if(G.step>0){ G.step--; G.msg=""; render(); window.scrollTo(0,0); } }
   else if(a==="atajo-copy"){ var w=el.dataset.v; copyText(w==="url"?AT_URL:w==="key"?SB_KEY:AT.token, w==="url"?"Dirección copiada.":w==="key"?"apikey copiada.":"Token copiado."); }
   else if(a==="atajo-refresh"){ AT.loaded=false; AT.msg=""; syncNow(true); render(); }
   else if(a==="accent"){ setProfile({accent:el.dataset.v}); render(); }
