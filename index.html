@@ -1240,8 +1240,8 @@ function processParams(){
     setVal(h,today(),v); ok.push(fmt(v)+(h.unit?" "+h.unit:"")+" en "+h.name);
   });
   if(ok.length) S.ok="Desde el atajo: "+ok.join(", ")+".";
-  if(ok.length || miss.length) S.note=(S.note?S.note+" ":"")+"Safari se abrió por un atajo viejo con la acción Abrir URLs. Para que no vuelva a pasar: en Atajos quita esa acción o borra esa automatización (instrucciones nuevas en editar perfil → atajo).";
   if(miss.length) S.note="No encontré "+(miss.length===1?"el hábito":"los hábitos")+" “"+miss.join("”, “")+"”. Revisa que se llamen igual en la app.";
+  if(ok.length || miss.length) S.note=(S.note?S.note+" ":"")+"Safari se abrió por un atajo viejo con la acción Abrir URLs. Para que no vuelva a pasar: en Atajos quita esa acción o borra esa automatización (instrucciones nuevas en editar perfil → atajo).";
   render();
 }
 
