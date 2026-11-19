@@ -52,7 +52,6 @@ async function build() {
   const w = new ListWidget();
   w.backgroundColor = new Color("#11100e");
   w.setPadding(12, 14, 12, 14);
-  w.url = "https://jlghabitstracker.github.io/";
   w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
   const s = await session();
   if (!s) { message(w, "Abre este script en Scriptable para iniciar sesión."); return w; }
